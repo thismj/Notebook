@@ -1,4 +1,5 @@
 {
+    "language": "zh-hans",
     "links": {
         "sidebar": {
             "我的博客": "https://thismj.cn"
@@ -8,7 +9,15 @@
         "expandable-chapters-small",
         "github",
         "splitter",
-        "disqus"
+        "disqus",
+        "-lunr",
+        "-search",
+        "search-plus",
+        "advanced-emoji",
+        "puml",
+        "tbfed-pagefooter",
+        "todo",
+        "klipse"
     ],
     "pluginsConfig": {
         "disqus": {
@@ -16,6 +25,11 @@
         },
         "github": {
             "url": "https://github.com/thismj"
+        },
+        "tbfed-pagefooter": {
+            "copyright": "Copyright &copy thismj.cn 2019",
+            "modify_format": "YYYY-MM-DD HH:mm:ss",
+            "modify_label": "该文件修订时间："
         }
     }
 }
