@@ -1,0 +1,21 @@
+{
+    "links": {
+        "sidebar": {
+            "我的博客": "https://thismj.cn"
+        }
+    },
+    "plugins": [
+        "expandable-chapters-small",
+        "github",
+        "splitter",
+        "disqus"
+    ],
+    "pluginsConfig": {
+        "disqus": {
+            "shortName": "thismj"
+        },
+        "github": {
+            "url": "https://github.com/thismj"
+        }
+    }
+}
