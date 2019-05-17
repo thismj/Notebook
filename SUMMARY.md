@@ -8,7 +8,7 @@
 * [Java进阶](Java进阶/README.md)
     * [Java静态代理与动态代理](Java进阶/part2.md)
 * [JVM](Android/README.md)
-    * [JVM内存区域划分](jvm/part1.md)
+    * [JVM运行时数据区](jvm/part1.md)
 * [Android](Android/README.md)
 * [计算机网络](计算机网络/README.md)
 * [计算机组成原理](计算机组成原理/README.md)

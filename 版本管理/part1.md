@@ -16,7 +16,12 @@
 2. git subtree 
 
    ```bash
-   
+   //父仓库中添加子仓库，
+   git subtree add --prefix=_book git@github.com:thismj/Notebook.git gh-pages --squash
+   //从源仓库拉取更新
+   git subtree push --prefix=_book git@github.com:thismj/Notebook.git gh-pages
+   //推送本地修改到源仓库
+   git subtree push --prefix=_book git@github.com:thismj/Notebook.git gh-pages
    ```
 
    
