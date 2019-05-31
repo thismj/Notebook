@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>JVM · GitBook</title>
+        <title>单链表 · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.3">
@@ -77,10 +77,10 @@
     <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="../jvm/part1.html" />
+    <link rel="next" href="part2.html" />
     
     
-    <link rel="prev" href="../Java进阶/part2.html" />
+    <link rel="prev" href="./" />
     
 
     </head>
@@ -260,9 +260,9 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.4" data-path="./">
+        <li class="chapter " data-level="1.4" data-path="../Android/">
             
-                <a href="./">
+                <a href="../Android/">
             
                     
                     JVM
@@ -292,9 +292,9 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.5" data-path="./">
+        <li class="chapter " data-level="1.5" data-path="../Android/">
             
-                <a href="./">
+                <a href="../Android/">
             
                     
                     Android
@@ -331,9 +331,9 @@
             
         </li>
     
-        <li class="chapter " data-level="1.8" data-path="../数据结构/">
+        <li class="chapter " data-level="1.8" data-path="./">
             
-                <a href="../数据结构/">
+                <a href="./">
             
                     
                     数据结构
@@ -345,9 +345,9 @@
             <ul class="articles">
                 
     
-        <li class="chapter " data-level="1.8.1" data-path="../数据结构/part1.html">
+        <li class="chapter active" data-level="1.8.1" data-path="part1.html">
             
-                <a href="../数据结构/part1.html">
+                <a href="part1.html">
             
                     
                     单链表
@@ -358,9 +358,9 @@
             
         </li>
     
-        <li class="chapter " data-level="1.8.2" data-path="../数据结构/part2.html">
+        <li class="chapter " data-level="1.8.2" data-path="part2.html">
             
-                <a href="../数据结构/part2.html">
+                <a href="part2.html">
             
                     
                     二叉树
@@ -451,7 +451,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href=".." >JVM</a>
+        <a href=".." >单链表</a>
     </h1>
 </div>
 
@@ -466,9 +466,185 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="jvm">JVM</h1>
+                                <h1 id="&#x5355;&#x94FE;&#x8868;">&#x5355;&#x94FE;&#x8868;</h1>
+<p>&#x5355;&#x94FE;&#x8868; <code>c++</code> &#x5B9E;&#x73B0;</p>
+<pre><code class="lang-LinkedList```&#x7C7B;&#x5B9A;&#x4E49;&#xFF1A;">
+```c++
+template&lt;class T&gt;
+struct ListNode {
+    //&#x6570;&#x636E;&#x57DF;
+    T data;
+    //&#x6307;&#x9488;&#x57DF;
+    ListNode&lt;T&gt; *next;
+};
+
+template&lt;class T&gt;
+class LinkedList {
+public:
+    LinkedList();
+
+    //&#x63D2;&#x5165;&#x6570;&#x636E;&#x5230;&#x6307;&#x5B9A;&#x7684;&#x4F4D;&#x7F6E;
+    void Insert(int index, T data);
+
+    //&#x5220;&#x9664;&#x6307;&#x5B9A;&#x4F4D;&#x7F6E;&#x7684;&#x6570;&#x636E;
+    void Delete(int index);
+
+    //&#x66F4;&#x65B0;&#x6307;&#x5B9A;&#x4F4D;&#x7F6E;&#x7684;&#x6570;&#x636E;
+    void Update(int index, T data);
+
+    //&#x83B7;&#x53D6;&#x6307;&#x5B9A;&#x4F4D;&#x7F6E;&#x7684;&#x6570;&#x636E;
+    T Get(int index);
+
+    //&#x8FD4;&#x56DE;&#x94FE;&#x8868;&#x6570;&#x636E;&#x4E2A;&#x6570;
+    int Size();
+
+    //&#x4F9D;&#x6B21;&#x6253;&#x5370;&#x6240;&#x6709;&#x7684;&#x6570;&#x636E;
+    void Print();
+
+    //&#x5934;&#x7ED3;&#x70B9;
+    ListNode&lt;T&gt; *head;
+
+private:
+    //&#x8FD4;&#x56DE;&#x6307;&#x5B9A;&#x4F4D;&#x7F6E;&#x7684;&#x7ED3;&#x70B9;&#x6307;&#x9488;
+    ListNode&lt;T&gt; *findNode(int index);
+
+    //&#x8BB0;&#x5F55;&#x6570;&#x636E;&#x4E2A;&#x6570;
+    int size;
+};
+</code></pre>
+<p>&#x5B9E;&#x73B0;<code>findNode()</code> &#x65B9;&#x6CD5;&#xFF0C;&#x65B9;&#x4FBF;&#x540E;&#x7EED;&#x67E5;&#x627E;&#x3001;&#x5220;&#x9664;&#x3001;&#x63D2;&#x5165;&#x3001;&#x66F4;&#x65B0;&#x7B49;&#x64CD;&#x4F5C;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-comment">/**
+ * &#x6B64;&#x65B9;&#x6CD5;&#x7528;&#x6765;&#x8FD4;&#x56DE;&#x5355;&#x94FE;&#x8868;&#x6307;&#x5B9A;&#x4F4D;&#x7F6E;&#x7684;&#x7ED3;&#x70B9;&#x6307;&#x9488;&#xFF0C;&#x65B9;&#x4FBF;&#x8FDB;&#x884C;&#x63D2;&#x5165;&#x3001;&#x5220;&#x9664;&#x3001;&#x66F4;&#x65B0;&#x7B49;&#x64CD;&#x4F5C;
+ */</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+ListNode&lt;T&gt; *LinkedList&lt;T&gt;::findNode(<span class="hljs-keyword">int</span> index) {
+    <span class="hljs-keyword">if</span> (index &lt; <span class="hljs-number">0</span> || index &gt;= size) {
+        <span class="hljs-keyword">throw</span> <span class="hljs-built_in">std</span>::invalid_argument(<span class="hljs-string">&quot;Find Error Index:&quot;</span> + to_string(index));
+    }
+
+    ListNode&lt;T&gt; *current = head;
+    <span class="hljs-keyword">int</span> position = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">while</span> (position &lt; index) {
+        current = current-&gt;next;
+        position++;
+    }
+    <span class="hljs-keyword">return</span> current;
+}
+</code></pre>
+<p>&#x67E5;&#x627E;&#x5143;&#x7D20;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+T LinkedList&lt;T&gt;::Get(<span class="hljs-keyword">int</span> index) {
+    ListNode&lt;T&gt; *node = findNode(index);
+    <span class="hljs-keyword">return</span> node-&gt;data;
+}
+</code></pre>
+<p>&#x63D2;&#x5165;&#x5143;&#x7D20;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">void</span> LinkedList&lt;T&gt;::Insert(<span class="hljs-keyword">int</span> index, T data) {
+    <span class="hljs-keyword">auto</span> *node = <span class="hljs-keyword">new</span> ListNode&lt;T&gt;();
+    node-&gt;data = data;
+
+    <span class="hljs-keyword">if</span> (index == <span class="hljs-number">0</span>) {
+        node-&gt;next = head;
+        head = node;
+    } <span class="hljs-keyword">else</span> {
+        ListNode&lt;T&gt; *pre = findNode(index - <span class="hljs-number">1</span>);
+        node-&gt;next = pre-&gt;next;
+        pre-&gt;next = node;
+    }
+    size++;
+}
+</code></pre>
+<p>&#x5220;&#x9664;&#x5143;&#x7D20;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">void</span> LinkedList&lt;T&gt;::Delete(<span class="hljs-keyword">int</span> index) {
+    ListNode&lt;T&gt; *pre;
+    ListNode&lt;T&gt; *current;
+    <span class="hljs-keyword">if</span> (index == <span class="hljs-number">0</span>) {
+        pre = head;
+    } <span class="hljs-keyword">else</span> {
+        pre = findNode(index - <span class="hljs-number">1</span>);
+    }
+    current = findNode(index);
+
+    pre-&gt;next = current-&gt;next;
+    <span class="hljs-keyword">delete</span> current;
+    size--;
+}
+</code></pre>
+<p>&#x66F4;&#x65B0;&#x5143;&#x7D20;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+<span class="hljs-keyword">void</span> LinkedList&lt;T&gt;::Update(<span class="hljs-keyword">int</span> index, T data) {
+    ListNode&lt;T&gt; *current = findNode(index);
+    current-&gt;data = data;
+}
+</code></pre>
+<p>&#x8FED;&#x4EE3;&#x6CD5;&#x9006;&#x8F6C;&#x5355;&#x94FE;&#x8868;&#x65B9;&#x6CD5;&#x4E00;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-comment">/**
+ * &#x901A;&#x8FC7;&#x8FED;&#x4EE3;&#x65B9;&#x5F0F;&#x53CD;&#x8F6C;&#x5355;&#x94FE;&#x8868;
+ * @return &#x65B0;&#x7684;&#x5934;&#x7ED3;&#x70B9;
+ */</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+ListNode&lt;T&gt; *ReverseByIterate(ListNode&lt;T&gt; *head) {
+    <span class="hljs-keyword">if</span> (!head || !head-&gt;next) {
+        <span class="hljs-keyword">return</span> head;
+    }
+    ListNode&lt;T&gt; *pre = head;
+    ListNode&lt;T&gt; *current = head-&gt;next;
+    ListNode&lt;T&gt; *temp;
+    <span class="hljs-keyword">while</span> (current) {
+        temp = current-&gt;next;
+        current-&gt;next = pre;
+        pre = current;
+        current = temp;
+    }
+
+    head-&gt;next = <span class="hljs-literal">nullptr</span>;
+    <span class="hljs-keyword">return</span> pre;
+}
+</code></pre>
+<p>&#x8FED;&#x4EE3;&#x6CD5;&#x9006;&#x8F6C;&#x5355;&#x94FE;&#x8868;&#x65B9;&#x6CD5;&#x4E00;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-comment">/**
+ * &#x4F9D;&#x6B21;&#x628A;&#x540E;&#x9762;&#x7684;&#x7ED3;&#x70B9;&#x63D2;&#x5165;&#x5230;&#x5934;&#x7ED3;&#x70B9;&#x524D;&#x9762;&#x53CD;&#x8F6C;&#x5355;&#x94FE;&#x8868;
+ * @return &#x65B0;&#x7684;&#x5934;&#x7ED3;&#x70B9;
+ */</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+ListNode&lt;T&gt; *ReverseByInsert(ListNode&lt;T&gt; *head) {
+    <span class="hljs-keyword">if</span> (!head || !head-&gt;next) {
+        <span class="hljs-keyword">return</span> head;
+    }
+
+    ListNode&lt;T&gt; *current = head-&gt;next;
+    head-&gt;next = <span class="hljs-literal">nullptr</span>;
+    ListNode&lt;T&gt; *temp;
+    <span class="hljs-keyword">while</span> (current) {
+        temp = current-&gt;next;
+        current-&gt;next = head;
+        head = current;
+        current = temp;
+    }
+    <span class="hljs-keyword">return</span> head;
+}
+</code></pre>
+<p>&#x9012;&#x5F52;&#x6CD5;&#x9006;&#x8F6C;&#x5355;&#x94FE;&#x8868;&#xFF1A;</p>
+<pre><code class="lang-c++"><span class="hljs-comment">/**
+ * &#x901A;&#x8FC7;&#x9012;&#x5F52;&#x65B9;&#x5F0F;&#x53CD;&#x8F6C;&#x5355;&#x94FE;&#x8868;
+ * @return &#x65B0;&#x7684;&#x5934;&#x7ED3;&#x70B9;
+ */</span>
+<span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">class</span> T&gt;
+ListNode&lt;T&gt; *ReverseByRecursive(ListNode&lt;T&gt; *head) {
+    <span class="hljs-keyword">if</span> (!head || !head-&gt;next) {
+        <span class="hljs-keyword">return</span> head;
+    }
+
+    ListNode&lt;T&gt; *current = ReverseByRecursive(head-&gt;next);
+    head-&gt;next-&gt;next = head;
+    head-&gt;next = <span class="hljs-literal">nullptr</span>;
+    <span class="hljs-keyword">return</span> current;
+}
+</code></pre>
 <footer class="page-footer"><span class="copyright">Copyright &#xA9; thismj.cn 2019 all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x8BE5;&#x6587;&#x4EF6;&#x4FEE;&#x8BA2;&#x65F6;&#x95F4;&#xFF1A;
-2019-05-13 19:56:45
+2019-05-31 20:35:31
 </span></footer> <link rel="stylesheet" type="text/css" href="https://storage.googleapis.com/app.klipse.tech/css/codemirror.css"> <script>     window.klipse_settings = {         selector: ".language-klipse, .lang-eval-clojure",         selector_eval_js: ".lang-eval-js",         selector_eval_python_client: ".lang-eval-python",         selector_eval_php: ".lang-eval-php",         selector_eval_scheme: ".lang-eval-scheme",         selector_eval_ruby: ".lang-eval-ruby",         selector_reagent: ".lang-reagent",        selector_google_charts: ".lang-google-chart",        selector_es2017: ".lang-eval-es2017",        selector_jsx: ".lang-eval-jsx",        selector_transpile_jsx: ".lang-transpile-jsx",        selector_render_jsx: ".lang-render-jsx",        selector_react: ".lang-react",        selector_eval_markdown: ".lang-render-markdown",        selector_eval_lambdaway: ".lang-render-lambdaway",        selector_eval_cpp: ".lang-eval-cpp",        selector_eval_html: ".lang-render-html",        selector_sql: ".lang-eval-sql",        selector_brainfuck: "lang-eval-brainfuck",        selector_js: ".lang-transpile-cljs"    }; </script> <script src="https://storage.googleapis.com/app.klipse.tech/plugin/js/klipse_plugin.js"></script>
                                 
                                 </section>
@@ -496,12 +672,12 @@
 
             
                 
-                <a href="../Java进阶/part2.html" class="navigation navigation-prev " aria-label="Previous page: Java静态代理与动态代理">
+                <a href="./" class="navigation navigation-prev " aria-label="Previous page: 数据结构">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
                 
-                <a href="../jvm/part1.html" class="navigation navigation-next " aria-label="Next page: JVM运行时数据区">
+                <a href="part2.html" class="navigation navigation-next " aria-label="Next page: 二叉树">
                     <i class="fa fa-angle-right"></i>
                 </a>
                 
@@ -512,7 +688,7 @@
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"JVM","level":"1.4","depth":1,"next":{"title":"JVM运行时数据区","level":"1.4.1","depth":2,"path":"jvm/part1.md","ref":"jvm/part1.md","articles":[]},"previous":{"title":"Java静态代理与动态代理","level":"1.3.1","depth":2,"path":"Java进阶/part2.md","ref":"Java进阶/part2.md","articles":[]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","disqus","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","klipse","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"disqus":{"useIdentifier":false,"shortName":"thismj"},"github":{"url":"https://github.com/thismj"},"puml":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"expandable-chapters-small":{},"klipse":{"myConfigKey":"it's the default value"},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"Android/README.md","mtime":"2019-05-13T11:56:45.697Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2019-05-31T12:35:48.213Z"},"basePath":"..","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"单链表","level":"1.8.1","depth":2,"next":{"title":"二叉树","level":"1.8.2","depth":2,"path":"数据结构/part2.md","ref":"数据结构/part2.md","articles":[]},"previous":{"title":"数据结构","level":"1.8","depth":1,"path":"数据结构/README.md","ref":"数据结构/README.md","articles":[{"title":"单链表","level":"1.8.1","depth":2,"path":"数据结构/part1.md","ref":"数据结构/part1.md","articles":[]},{"title":"二叉树","level":"1.8.2","depth":2,"path":"数据结构/part2.md","ref":"数据结构/part2.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","disqus","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","klipse","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"disqus":{"useIdentifier":false,"shortName":"thismj"},"github":{"url":"https://github.com/thismj"},"puml":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"expandable-chapters-small":{},"klipse":{"myConfigKey":"it's the default value"},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"数据结构/part1.md","mtime":"2019-05-31T12:35:31.386Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2019-05-31T12:35:48.213Z"},"basePath":"..","book":{"language":""}});
         });
     </script>
 </div>
