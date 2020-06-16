@@ -9,20 +9,15 @@
         "expandable-chapters-small",
         "github",
         "splitter",
-        "disqus",
         "-lunr",
         "-search",
         "search-plus",
         "advanced-emoji",
         "puml",
         "tbfed-pagefooter",
-        "todo",
-        "klipse"
+        "todo"
     ],
     "pluginsConfig": {
-        "disqus": {
-            "shortName": "thismj"
-        },
         "github": {
             "url": "https://github.com/thismj"
         },
