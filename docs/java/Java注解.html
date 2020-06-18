@@ -250,12 +250,133 @@
                                 <section class="normal markdown-section">
                                 
                                 <h1 id="java&#x6CE8;&#x89E3;">Java&#x6CE8;&#x89E3;</h1>
+<p>Java&#x6CE8;&#x89E3;&#xFF08;&#x4E5F;&#x88AB;&#x79F0;&#x4E3A;&#x5143;&#x6570;&#x636E;&#xFF09;&#xFF0C;&#x4E3A;&#x6211;&#x4EEC;&#x518D;&#x4EE3;&#x7801;&#x4E2D;&#x6DFB;&#x52A0;&#x4FE1;&#x606F;&#x63D0;&#x4F9B;&#x4E86;&#x4E00;&#x79CD;&#x5F62;&#x5F0F;&#x5316;&#x7684;&#x65B9;&#x6CD5;&#x3002;</p>
+<p><strong>&#x5185;&#x7F6E;&#x6807;&#x51C6;&#x6CE8;&#x89E3;</strong>&#xFF1A;</p>
 <ul>
-<li>Grade java library &#x4E0D;&#x80FD;&#x4F9D;&#x8D56; android library&#xFF0C;&#x4E0D;&#x80FD;&#x4F9D;&#x8D56;aar</li>
-<li>Gradle 5.x AutoService annotationProcessor&#x95EE;&#x9898; </li>
+<li><p>@Override &#xFF08;1.5&#xFF09;
+<br>&#x8868;&#x793A;&#x5F53;&#x524D;&#x65B9;&#x6CD5;&#x5C06;&#x8986;&#x76D6;&#x7236;&#x7C7B;&#x7684;&#x65B9;&#x6CD5;&#xFF0C;&#x5982;&#x679C;&#x65B9;&#x6CD5;&#x540D;&#x79F0;&#x6216;&#x8005;&#x7B7E;&#x540D;&#x5BF9;&#x4E0D;&#x4E0A;&#xFF0C;&#x5219;&#x7F16;&#x8BD1;&#x5668;&#x4F1A;&#x63D0;&#x793A;&#x9519;&#x8BEF;&#x4FE1;&#x606F;</p>
+</li>
+<li><p>@Deprecated&#xFF08;1.5&#xFF09;
+<br>&#x6807;&#x8BB0;&#x5F53;&#x524D;&#x5143;&#x7D20;&#x5DF2;&#x8FC7;&#x65F6;&#xFF0C;&#x7F16;&#x8BD1;&#x5668;&#x4F1A;&#x7ED9;&#x51FA;&#x8B66;&#x544A;</p>
+</li>
+<li><p>@SuppressWarnings&#xFF08;1.5&#xFF09;
+<br>&#x5173;&#x95ED;&#x7F16;&#x8BD1;&#x5668;&#x8B66;&#x544A;&#x4FE1;&#x606F;&#xFF0C;&#x901A;&#x8FC7;&#x5B57;&#x7B26;&#x4E32;&#x6765;&#x6307;&#x5B9A;&#x9700;&#x8981;&#x5173;&#x95ED;&#x7684;&#x7F16;&#x8BD1;&#x8B66;&#x544A;&#x7C7B;&#x578B;&#xFF0C;&#x652F;&#x6301;&#x7684;&#x7F16;&#x8BD1;&#x8B66;&#x544A;&#x7C7B;&#x578B;&#x53D6;&#x51B3;&#x4E8E;&#x4F7F;&#x7528;&#x7684;&#x7F16;&#x8BD1;&#x5668;&#x6216;IDE</p>
+</li>
+<li><p>@SafeVarargs &#xFF08;1.7&#xFF09;
+<br>&#x8868;&#x660E;&#x8BE5;&#x65B9;&#x6CD5;&#x5185;&#x90E8;&#x4E0D;&#x4F1A;&#x6267;&#x884C;&#x7C7B;&#x578B;&#x4E0D;&#x5B89;&#x5168;&#x7684;&#x64CD;&#x4F5C;&#xFF0C;&#x53EF;&#x6CE8;&#x89E3;&#x4E8E;&#x6784;&#x9020;&#x51FD;&#x6570;&#x6216;&#x8005; static&#x3001;final &#x4FEE;&#x9970;&#x7684;&#x65B9;&#x6CD5;&#xFF0C;&#x8BA9;&#x7F16;&#x8BD1;&#x5668;&#x4E0D;&#x63D0;&#x793A; &quot;unchecked&quot; &#x8B66;&#x544A;</p>
+</li>
+<li><p>@FunctionalInterface &#xFF08;1.8&#xFF09;
+<br>&#x8868;&#x660E;&#x8FD9;&#x662F;&#x4E2A;&#x51FD;&#x6570;&#x5F0F;&#x63A5;&#x53E3;&#xFF08;&#x53EF;&#x8F6C;&#x6362;&#x4E3A; lambda &#x8868;&#x8FBE;&#x5F0F;&#xFF09;&#xFF0C;&#x5982;&#x679C;&#x8BE5;&#x63A5;&#x53E3;&#x91CC;&#x9762;&#x4E0D;&#x6B62;&#x4E00;&#x4E2A;&#x62BD;&#x8C61;&#x65B9;&#x6CD5;&#xFF0C;&#x5219;&#x7F16;&#x8BD1;&#x5668;&#x4F1A;&#x63D0;&#x793A;&#x9519;&#x8BEF;&#x4FE1;&#x606F;</p>
+</li>
 </ul>
+<p><strong>&#x5185;&#x7F6E;&#x5143;&#x6CE8;&#x89E3;&#xFF08;&#x8D1F;&#x8D23;&#x6CE8;&#x89E3;&#x5176;&#x5B83;&#x7684;&#x6CE8;&#x89E3;&#xFF09;</strong></p>
+<ul>
+<li>@Target&#xFF1A;&#x6307;&#x5B9A;&#x8BE5;&#x6CE8;&#x89E3;&#x53EF;&#x7528;&#x7684;&#x4F5C;&#x7528;&#x57DF;&#xFF0C;ElementType &#x679A;&#x4E3E;&#x7C7B;&#x578B;&#x5305;&#x62EC;&#xFF1A;</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>ElementType</th>
+<th>&#x4F5C;&#x7528;&#x57DF;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TYPE</td>
+<td>&#x7C7B;&#x3001;&#x63A5;&#x53E3;&#x3001;&#x679A;&#x4E3E;</td>
+</tr>
+<tr>
+<td>FIELD</td>
+<td>&#x7C7B;&#x5B57;&#x6BB5;&#xFF08;&#x5305;&#x62EC;&#x679A;&#x4E3E;&#x5E38;&#x91CF;&#xFF09;</td>
+</tr>
+<tr>
+<td>METHOD</td>
+<td>&#x65B9;&#x6CD5;</td>
+</tr>
+<tr>
+<td>PARAMETER</td>
+<td>&#x53C2;&#x6570;</td>
+</tr>
+<tr>
+<td>CONSTRUCTOR</td>
+<td>&#x6784;&#x9020;&#x51FD;&#x6570;</td>
+</tr>
+<tr>
+<td>LOCAL_VARIABLE</td>
+<td>&#x5C40;&#x90E8;&#x53D8;&#x91CF;</td>
+</tr>
+<tr>
+<td>ANNOTATION_TYPE</td>
+<td>&#x6CE8;&#x89E3;&#x7C7B;&#x578B;</td>
+</tr>
+<tr>
+<td>PACKAGE</td>
+<td>&#x5305;</td>
+</tr>
+<tr>
+<td>TYPE_PARAMETER</td>
+<td>&#x6CDB;&#x578B;&#x53C2;&#x6570;&#xFF08;1.8&#xFF09;</td>
+</tr>
+<tr>
+<td>TYPE_USE</td>
+<td>&#x7C7B;&#x578B;&#x540D;&#x79F0;&#xFF08;1.8&#xFF09;</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>@Retention&#xFF1A;&#x6307;&#x5B9A;&#x6CE8;&#x89E3;&#x4FDD;&#x7559;&#x7684;&#x9636;&#x6BB5;&#xFF0C;RetentionPolicy &#x679A;&#x4E3E;&#x7C7B;&#x578B;&#x5305;&#x62EC;&#xFF1A;</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>RetentionPolicy</th>
+<th>&#x9636;&#x6BB5;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SOURCE</td>
+<td>&#x4EC5;&#x4FDD;&#x7559;&#x5728;&#x6E90;&#x7801;&#x9636;&#x6BB5;&#xFF0C;&#x4F1A;&#x88AB;&#x7F16;&#x8BD1;&#x5668;&#x4E22;&#x5F03;</td>
+</tr>
+<tr>
+<td>CLASS</td>
+<td>&#x7F16;&#x8BD1;&#x65F6;&#x4FDD;&#x7559;&#x5728; class &#x6587;&#x4EF6;&#x4E2D;&#xFF0C;VM&#x8FD0;&#x884C;&#x65F6;&#x4E22;&#x5F03;</td>
+</tr>
+<tr>
+<td>SOURCE</td>
+<td>&#x4FDD;&#x7559;&#x5230;VM&#x8FD0;&#x884C;&#x65F6;&#xFF0C;&#x53EF;&#x4EE5;&#x901A;&#x8FC7;&#x53CD;&#x5C04;&#x83B7;&#x53D6;&#x4FE1;&#x606F;</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><p>@Documented&#xFF1A;&#x6307;&#x5B9A;&#x751F;&#x6210; JavaDoc &#x65F6;&#x5305;&#x542B;&#x8BE5;&#x6CE8;&#x89E3;</p>
+</li>
+<li><p>@Inherited&#xFF1A;&#x6307;&#x5B9A;&#x8BE5;&#x6CE8;&#x89E3;&#x4F5C;&#x7528;&#x5728; class &#x4E0A;&#x65F6;&#xFF0C;&#x5B50;&#x7C7B;&#x53EF;&#x4EE5;&#x7EE7;&#x627F;&#x7236;&#x7C7B;&#x7684;&#x6CE8;&#x89E3;</p>
+</li>
+<li><p>@Native&#xFF1A;&#x8868;&#x793A;&#x5B9A;&#x4E49;&#x5E38;&#x91CF;&#x503C;&#x7684;&#x5B57;&#x6BB5;&#x53EF;&#x4EE5;&#x88AB; native &#x4EE3;&#x7801;&#x5F15;&#x7528;&#xFF08;1.8&#xFF09;</p>
+</li>
+<li><p>@Repeatable&#xFF1A;&#x6307;&#x5B9A;&#x4E00;&#x4E2A;&#x5BB9;&#x5668;&#x6CE8;&#x89E3;&#xFF0C;&#x4F7F;&#x8BE5;&#x6CE8;&#x89E3;&#x53EF;&#x4EE5;&#x5728;&#x4E00;&#x4E2A;&#x5143;&#x7D20;&#x4E0A;&#x91CD;&#x590D;&#x4F7F;&#x7528;&#xFF08;1.8&#xFF09;&#xFF1A;</p>
+<pre><code class="lang-java"> <span class="hljs-meta">@Repeatable</span>(Authorities.class)
+  <span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> Authority {
+      <span class="hljs-function">String <span class="hljs-title">role</span><span class="hljs-params">()</span></span>;
+  }
+
+  <span class="hljs-keyword">public</span> <span class="hljs-meta">@interface</span> Authorities {
+      Authority[] value();
+  }
+
+  <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RepeatAnnotationUseNewVersion</span> </span>{
+      <span class="hljs-meta">@Authority</span>(role=<span class="hljs-string">&quot;Admin&quot;</span>)
+      <span class="hljs-meta">@Authority</span>(role=<span class="hljs-string">&quot;Manager&quot;</span>)
+      <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doSomeThing</span><span class="hljs-params">()</span></span>{ }
+  }
+</code></pre>
+</li>
+</ul>
+<p><strong>&#x6CE8;&#x89E3;&#x5904;&#x7406;&#x5668;</strong></p>
+<p>apt&#xFF08;Annotation processing tool&#xFF09;&#x662F; javac &#x7684;&#x4E00;&#x4E2A;&#x5DE5;&#x5177;</p>
 <footer class="page-footer"><span class="copyright">Copyright &#xA9; thismj.cn 2019 all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x8BE5;&#x6587;&#x4EF6;&#x4FEE;&#x8BA2;&#x65F6;&#x95F4;&#xFF1A;
-2020-06-05 11:13:27
+2020-06-18 21:15:41
 </span></footer>
                                 
                                 </section>
@@ -299,7 +420,7 @@
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Java注解","level":"1.2.1","depth":2,"next":{"title":"Android","level":"1.3","depth":1,"path":"android/README.md","ref":"android/README.md","articles":[{"title":"Jetpack导航组件","level":"1.3.1","depth":2,"path":"android/Jetpack导航组件.md","ref":"android/Jetpack导航组件.md","articles":[]},{"title":"Jetpack Lifecycles-LiveData-ViewModel","level":"1.3.2","depth":2,"path":"android/Jetpack Lifecycles-LiveData-ViewModel.md","ref":"android/Jetpack Lifecycles-LiveData-ViewModel.md","articles":[]}]},"previous":{"title":"Java","level":"1.2","depth":1,"path":"java/README.md","ref":"java/README.md","articles":[{"title":"Java注解","level":"1.2.1","depth":2,"path":"java/Java注解.md","ref":"java/Java注解.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"github":{"url":"https://github.com/thismj"},"puml":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"expandable-chapters-small":{},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"java/Java注解.md","mtime":"2020-06-05T03:13:27.947Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-06-16T12:34:17.624Z"},"basePath":"..","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Java注解","level":"1.2.1","depth":2,"next":{"title":"Android","level":"1.3","depth":1,"path":"android/README.md","ref":"android/README.md","articles":[{"title":"Jetpack导航组件","level":"1.3.1","depth":2,"path":"android/Jetpack导航组件.md","ref":"android/Jetpack导航组件.md","articles":[]},{"title":"Jetpack Lifecycles-LiveData-ViewModel","level":"1.3.2","depth":2,"path":"android/Jetpack Lifecycles-LiveData-ViewModel.md","ref":"android/Jetpack Lifecycles-LiveData-ViewModel.md","articles":[]}]},"previous":{"title":"Java","level":"1.2","depth":1,"path":"java/README.md","ref":"java/README.md","articles":[{"title":"Java注解","level":"1.2.1","depth":2,"path":"java/Java注解.md","ref":"java/Java注解.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"github":{"url":"https://github.com/thismj"},"puml":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"expandable-chapters-small":{},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"java/Java注解.md","mtime":"2020-06-18T13:15:41.256Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-06-18T12:57:27.513Z"},"basePath":"..","book":{"language":""}});
         });
     </script>
 </div>
