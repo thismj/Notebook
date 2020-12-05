@@ -1,2 +1,0 @@
-# Jetpack Lifecycles-LiveData-ViewModel
-

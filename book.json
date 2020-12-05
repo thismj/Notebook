@@ -15,7 +15,9 @@
         "advanced-emoji",
         "puml",
         "tbfed-pagefooter",
-        "todo"
+        "todo",
+        "etoc-plus",
+        "mermaid-gb3"
     ],
     "pluginsConfig": {
         "github": {
