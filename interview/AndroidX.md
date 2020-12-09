@@ -129,7 +129,28 @@ ReportFragment.injectIfNeededIn()，通过 registerActivityLifecycleCallbacks(SD
 
 ### LiveData
 
+[LiveData源码解析](https://github.com/leavesC/AndroidGuide/blob/gitbook/jetpack/LiveData%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.md)
+
+LiveData包含一个 SafeIterableMap 类型的 mObservers 变量，用来记录当前可观察的 Observer，其元素是 ObserverWrapper，当调用 LiveData 的 observe() 方法时，把传入的 Observer 封装为 LifecycleBoundObserver（继承自ObserverWrapper，实现了LifecycleEventObserver接口），通过 LifecycleOwner 来添加 LifecycleBoundObserver 的生命周期感知回调，所以可以在进入 DESTROY 状态时自动移除 Observer。
+
+```java
+observe -> LifecycleBoundObserver 
+observeForever -> AlwaysActiveObserver
+
+MutableLiveData: 将 Livedata 的 setValue() 和 postValue() 方法的访问权限提升为了 public
+  
+MediatorLiveData：中介LiveData，addSource添加其它的LiveData作为数据源
+  
+Transformations：利用 MediatorLiveData 进行 LiveData 的数据类型转换 map（类型转换为其他类型）、switchMap（类型转换为其他类型的LiveData）distinctUntilChanged（过滤重复值）
+  
+ComputableLiveData：带有生命周期监听、响应式的触发耗时任务、以 LiveData 作为中介获取任务执行结果
+```
+
+
+
 ### ViewModel
+
+[ViewModel源码解析](https://github.com/leavesC/AndroidGuide/blob/gitbook/jetpack/ViewModel%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90.md)
 
 如何初始化？
 
@@ -145,5 +166,41 @@ ViewModelProvider(this).get("key-str",MyViewModel::class.java) //指定ViewModel
 构造 ViewModelProvider 需要传 ViewModelStoreOwner（获取ViewModelStore实例）和一个 Factory 对象（用来构造ViewModel实例），ComponentActivity 和 Fargment 都实现了 ViewModelStoreOwner 接口，内部保存了一个 ViewModelStore 实例（内部是一个 hashMap 用来存储 ViewModel 实例）。在 ActivityThread 的 performDestroyActivity() 方法里面，会调用 Activity 实例的 retainNonConfigurationInstances() 方法来保存一个 NonConfigurationInstances对象（lastNonConfigurationInstances：里面包含有当前的 ViewModelStore实例） ，由于配置发生改变重新创建Activity时，在 performLaunchActivity() 方法里面把 lastNonConfigurationInstances 重新赋值回去，所以确保Activity重新创建时（配置发生改变）能获取到上次使用的 ViewModel 实例。在Activity onDestroy回调时，判断是否由于配置改变导致的重建，如果不是，则正常 clear ViewModelStore 里面所有的 ViewModel 实例。
 
 默认的几个 factory，不指定的话默认是 NewInstanceFactory，反射构造无参 ViewModel 实例；AndroidViewModelFactory，需要 ViewModel 有一个带有 Application 参数的构造函数；KeyedFactory，需要指定 ViewModelStore 保存 ViewModel 的Key。可以实现 HasDefaultViewModelProviderFactory 来指定 ViewModelStoreOwner 的默认 Factory。
+
+
+
+### App StartUp
+
+[从源码看 Jetpack（5）-Startup 源码详解](https://leavesc.gitbook.io/androidguide/jetpack-yuan-ma-bi-ji/startup-yuan-ma-xiang-jie)
+
+### SavedStateHandle
+
+[从源码看 Jetpack（7）-SavedStateHandle 源码解析](https://leavesc.gitbook.io/androidguide/jetpack-yuan-ma-bi-ji/savedstatehandle-yuan-ma-xiang-jie)
+
+
+
+### WorkManager
+
+JobScheduler  Android 5.0 添加，不属于AndroidX（放在这里做个比对）。通过获取到 JobSchduler 的系统服务，然后设置一些预定条件的 JobInfo，通过 schedule 方法把任务交给系统服务调度。Android 5.0之前，可以使用 FirebaseJobDispatcher、GcmNetworkManager （兼容到API 14）
+
+[Android JobScheduler的使用和原理](https://www.jianshu.com/p/55e16941bfbd)
+
+7.0之后，JobInfo的 setPeriodic 定时任务最小间隔时间为15min，可以通过 setMinimumLatency() 方法来做循环 schdule Job，做到小于 15min 的定时任务 
+
+WorkManager 是 AndroidX 的组件， 支持的API级别为14，底层调度工作原理：
+
+![](https://developer.android.com/images/topic/libraries/architecture/workmanager/overview-criteria.png?hl=zh-cn)
+
+
+
+
+
+## 注解
+
+### RestrictTo
+
+[[RestrictTo not restricting usage of restricted method](https://stackoverflow.com/questions/53069908/restrictto-not-restricting-usage-of-restricted-method)](https://stackoverflow.com/questions/53069908/restrictto-not-restricting-usage-of-restricted-method)
+
+指定被注解元素的使用范围，在Android Studio可以测试RestrictTo.Scope.SUBCLASSES，其它的 scope 需要把 module  编译成 maven library（通过groupid、artifactId区分）
 
 

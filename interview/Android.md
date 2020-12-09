@@ -190,12 +190,6 @@ fun Canvas.drawTextByPoint(
 
 
 
-
-
-## AndroidX
-
-
-
 ## Android gradle
 
 ### ViewBinding
