@@ -10,6 +10,7 @@
     * [计算机网络](interview/计算机网络.md)
     * [Android](interview/Android.md)
     * [AndroidX](interview/AndroidX.md)
+    * [Android性能优化](interview/Android性能优化.md)
     * [Gradle](interview/Gradle.md)
     * [Android源码](interview/Android源码.md)
     * [数据库](interview/数据库.md)

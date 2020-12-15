@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>JVM · GitBook</title>
+        <title>Android性能优化 · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.3">
@@ -85,10 +85,10 @@
     <link rel="shortcut icon" href="../gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="数据结构.html" />
+    <link rel="next" href="Gradle.html" />
     
     
-    <link rel="prev" href="Kotlin.html" />
+    <link rel="prev" href="AndroidX.html" />
     
 
     </head>
@@ -179,7 +179,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.2.3" data-path="Jvm.html">
+        <li class="chapter " data-level="1.2.3" data-path="Jvm.html">
             
                 <a href="Jvm.html">
             
@@ -257,7 +257,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.2.9" data-path="Android性能优化.html">
+        <li class="chapter active" data-level="1.2.9" data-path="Android性能优化.html">
             
                 <a href="Android性能优化.html">
             
@@ -357,7 +357,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href=".." >JVM</a>
+        <a href=".." >Android性能优化</a>
     </h1>
 </div>
 
@@ -372,20 +372,101 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="jvm">JVM</h1>
+                                <h1 id="android&#x6027;&#x80FD;&#x4F18;&#x5316;">Android&#x6027;&#x80FD;&#x4F18;&#x5316;</h1>
 <!-- toc --><div id="toc" class="toc">
 
 <ul>
-<li><a href="#&#x7C7B;&#x52A0;&#x8F7D;&#x673A;&#x5236;">&#x7C7B;&#x52A0;&#x8F7D;&#x673A;&#x5236;</a></li>
+<li><a href="#&#x6027;&#x80FD;&#x4F18;&#x5316;&#x5DE5;&#x5177;">&#x6027;&#x80FD;&#x4F18;&#x5316;&#x5DE5;&#x5177;</a><ul>
+<li><a href="#profile-gpu-rendering"><strong>Profile GPU Rendering</strong></a></li>
+</ul>
+</li>
+<li><a href="#&#x542F;&#x52A8;&#x4F18;&#x5316;">&#x542F;&#x52A8;&#x4F18;&#x5316;</a><ul>
+<li><a href="#windowbackground">windowBackground</a></li>
+<li><a href="#&#x61D2;&#x52A0;&#x8F7D;">&#x61D2;&#x52A0;&#x8F7D;</a></li>
+<li><a href="#&#x5F02;&#x6B65;&#x521D;&#x59CB;&#x5316;">&#x5F02;&#x6B65;&#x521D;&#x59CB;&#x5316;</a></li>
+<li><a href="#&#x9ED1;&#x79D1;&#x6280;">&#x9ED1;&#x79D1;&#x6280;</a></li>
+</ul>
+</li>
 </ul>
 
 </div><!-- tocstop -->
-<h3 id="&#x7C7B;&#x52A0;&#x8F7D;&#x673A;&#x5236;">&#x7C7B;&#x52A0;&#x8F7D;&#x673A;&#x5236;</h3>
-<p><a href="https://www.liaoxuefeng.com/wiki/1252599548343744/1264804593397984" target="_blank">&#x52A8;&#x6001;&#x4EE3;&#x7406;</a>
-<a href="https://www.cnblogs.com/jaredlam/archive/2011/11/08/2241089.html" target="_blank"><a href="https://www.cnblogs.com/jaredlam/archive/2011/11/08/2241089.html" target="_blank">&#x88C5;&#x9970;&#x6A21;&#x5F0F;&#x4E0E;&#x4EE3;&#x7406;&#x6A21;&#x5F0F;&#x7684;&#x533A;&#x522B;</a></a></p>
-<p><a href="https://www.cxyxiaowu.com/6272.html" target="_blank">https://www.cxyxiaowu.com/6272.html</a>) </p>
+<h2 id="&#x6027;&#x80FD;&#x4F18;&#x5316;&#x5DE5;&#x5177;">&#x6027;&#x80FD;&#x4F18;&#x5316;&#x5DE5;&#x5177;</h2>
+<h3 id="profile-gpu-rendering"><strong>Profile GPU Rendering</strong></h3>
+<table>
+<thead>
+<tr>
+<th>&#x67F1;&#x72B6;&#x56FE;&#x989C;&#x8272;</th>
+<th>&#x6E32;&#x67D3;&#x9636;&#x6BB5;</th>
+<th>&#x8BF4;&#x660E;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&#x6A58;&#x8272;</td>
+<td>&#x4EA4;&#x6362;&#x7F13;&#x51B2;&#x533A;</td>
+<td>&#x4EE3;&#x8868;cpu&#x5728;&#x7B49;&#x5F85;gpu&#x5B8C;&#x6210;&#x5DE5;&#x4F5C;,&#x5982;&#x679C;&#x8FC7;&#x9AD8;&#x4EE3;&#x8868;GPU&#x9700;&#x8981;&#x5B8C;&#x6210;&#x7684;&#x5DE5;&#x4F5C;&#x8FC7;&#x591A;.</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>&#x6DF1;&#x84DD;&#x8272;</td>
+<td>&#x7ED8;&#x5236;</td>
+<td>&#x4EE3;&#x8868;&#x521B;&#x5EFA;&#x66F4;&#x65B0;DisplayList&#x7684;&#x65F6;&#x95F4;&#xFF0C;&#x8FC7;&#x9AD8;&#x4EE3;&#x8868;&#x5728;onDraw&#x4E2D;&#x82B1;&#x8D39;&#x8FC7;&#x591A;&#x65F6;&#x95F4;,&#x53EF;&#x80FD;&#x662F;&#x81EA;&#x5B9A;&#x4E49;&#x753B;&#x56FE;&#x64CD;&#x4F5C;&#x592A;&#x591A;&#x6216;&#x6267;&#x884C;&#x4E86;&#x5176;&#x5B83;&#x64CD;&#x4F5C;.</td>
+</tr>
+<tr>
+<td>&#x6DE1;&#x7EFF;&#x8272;</td>
+<td>&#x6D4B;&#x91CF;/&#x5E03;&#x5C40;</td>
+<td>&#x4EE3;&#x8868;&#x4E86; onLayout &#x548C; onMeasure &#x65B9;&#x6CD5;&#x6D88;&#x8017;&#x7684;&#x603B;&#x65F6;&#x95F4;&#xFF0C;&#x8FD9;&#x6BB5;&#x5F88;&#x9AD8;&#x4EE3;&#x8868;&#x904D;&#x5386;&#x6574;&#x4E2A;view&#x6811;&#x7ED3;&#x6784;&#x82B1;&#x8D39;&#x4E86;&#x592A;&#x591A;&#x65F6;&#x95F4;</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>&#x58A8;&#x7EFF;&#x8272;</td>
+<td>&#x5176;&#x4ED6;&#x65F6;&#x95F4;/VSync &#x5EF6;&#x8FDF;</td>
+<td>&#x4EE3;&#x8868;&#x5728;&#x8FDE;&#x7EED;&#x4E24;&#x5E27;&#x95F4;&#x7684;&#x65F6;&#x95F4;&#x95F4;&#x9694;,&#x53EF;&#x80FD;&#x662F;&#x56E0;&#x4E3A;&#x5B50;&#x7EBF;&#x7A0B;&#x6267;&#x884C;&#x65F6;&#x95F4;&#x8FC7;&#x957F;&#x62A2;&#x5360;&#x4E86;UI&#x7EBF;&#x7A0B;&#x88AB;cpu&#x6267;&#x884C;&#x7684;&#x673A;&#x4F1A;.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="&#x542F;&#x52A8;&#x4F18;&#x5316;">&#x542F;&#x52A8;&#x4F18;&#x5316;</h2>
+<p><a href="https://juejin.cn/post/6844904093786308622#heading-69" target="_blank">&#x6DF1;&#x5165;&#x63A2;&#x7D22;Android&#x542F;&#x52A8;&#x901F;&#x5EA6;&#x4F18;&#x5316;&#xFF08;&#x4E0A;&#xFF09;</a></p>
+<p><a href="https://juejin.cn/post/6870457006784774152" target="_blank">&#x6DF1;&#x5165;&#x63A2;&#x7D22;Android&#x542F;&#x52A8;&#x901F;&#x5EA6;&#x4F18;&#x5316;&#xFF08;&#x4E0B;&#xFF09;</a></p>
+<p><a href="https://juejin.cn/post/6844904152670142477" target="_blank">&#x4E00;&#x7EBF;&#x5927;&#x5382;&#x8D44;&#x6DF1;APP&#x6027;&#x80FD;&#x4F18;&#x5316;&#x7CFB;&#x5217;-&#x5F02;&#x6B65;&#x4F18;&#x5316;&#x4E0E;&#x62D3;&#x6251;&#x6392;&#x5E8F;&#xFF08;&#x4E8C;&#xFF09;</a></p>
+<h3 id="windowbackground">windowBackground</h3>
+<p>&#x9884;&#x8BBE;Window&#x80CC;&#x666F;&#xFF0C;&#x907F;&#x514D;&#x542F;&#x52A8;&#x767D;&#x5C4F;&#xFF0C;&#x589E;&#x52A0;Splash&#x9875;&#x9762;</p>
+<h3 id="&#x61D2;&#x52A0;&#x8F7D;">&#x61D2;&#x52A0;&#x8F7D;</h3>
+<p>&#x6309;&#x9700;&#x521D;&#x59CB;&#x5316;&#xFF0C;&#x7279;&#x522B;&#x662F;<strong>&#x9488;&#x5BF9;&#x4E8E;&#x4E00;&#x4E9B;&#x5E94;&#x7528;&#x542F;&#x52A8;&#x65F6;&#x4E0D;&#x9700;&#x8981;&#x521D;&#x59CB;&#x5316;&#x7684;&#x5E93;</strong>&#xFF0C;&#x53EF;&#x4EE5;&#x7B49;&#x5230;&#x7528;&#x65F6;&#x624D;&#x8FDB;&#x884C;&#x52A0;&#x8F7D;&#xFF1B;&#x4F7F;&#x7528; IdleHandler &#x8FDB;&#x884C;&#x61D2;&#x52A0;&#x8F7D;</p>
+<h3 id="&#x5F02;&#x6B65;&#x521D;&#x59CB;&#x5316;">&#x5F02;&#x6B65;&#x521D;&#x59CB;&#x5316;</h3>
+<ul>
+<li>&#x542F;&#x52A8;&#x5668;&#x601D;&#x60F3;&#xFF0C;&#x6BCF;&#x4E2A;&#x9700;&#x8981;&#x521D;&#x59CB;&#x5316;&#x7684;&#x7EC4;&#x4EF6;&#x62BD;&#x8C61;&#x4E3A;&#x4E00;&#x4E2A; Task &#x5B9E;&#x4F8B;</li>
+<li>&#x6307;&#x5B9A;&#x5404;&#x4E2A; Task &#x4E4B;&#x95F4;&#x7684;&#x4F9D;&#x8D56;&#x5173;&#x7CFB;&#xFF0C;&#x6784;&#x9020;&#x4E00;&#x4E2A; Task &#x7684;&#x6709;&#x5411;&#x65E0;&#x73AF;&#x56FE;&#xFF0C;&#x901A;&#x8FC7;&#x62D3;&#x6251;&#x6392;&#x5E8F;&#x4F18;&#x5316;&#x786E;&#x5B9A; Task &#x7684;&#x521D;&#x59CB;&#x5316;&#x987A;&#x5E8F; </li>
+<li>&#x7EBF;&#x7A0B;&#x6C60;&#x5E76;&#x53D1;&#x6267;&#x884C;&#x5404;&#x4E2A; Task &#x7684;&#x521D;&#x59CB;&#x5316;&#xFF0C;&#x901A;&#x8FC7;&#x540C;&#x6B65;&#x624B;&#x6BB5;&#xFF08;&#x4F8B;&#x5982;CountDownLatch&#xFF09;&#x4FDD;&#x8BC1; Task &#x6267;&#x884C;&#x7684;&#x4F9D;&#x8D56;&#x5173;&#x7CFB;</li>
+</ul>
+<p>&#x5B9E;&#x8DF5;&#x7ECF;&#x9A8C;&#xFF1A;</p>
+<p>&#x786E;&#x5B9A;&#x662F;&#x5426;&#x6BCF;&#x4E2A;&#x7EC4;&#x4EF6;&#x7684;&#x5F02;&#x6B65;&#x521D;&#x59CB;&#x5316;&#x8017;&#x65F6;&#x662F;&#x5927;&#x81F4;&#x5E73;&#x5747;&#x7684;&#xFF0C;&#x8FD9;&#x6837;&#x66F4;&#x6709;&#x4F18;&#x5316;&#x7684;&#x610F;&#x4E49;&#xFF0C;&#x5982;&#x679C;&#x603B;&#x4F53;&#x7684;&#x8017;&#x65F6;&#x65F6;&#x95F4;&#x5F88;&#x957F;&#xFF0C;&#x4F46;&#x662F;&#x53EA;&#x6709;&#x67D0;&#x4E2A;&#x7EC4;&#x4EF6;&#x521D;&#x59CB;&#x5316;&#x8017;&#x65F6;&#x5F88;&#x957F;&#xFF0C;&#x5176;&#x5B83;&#x7EC4;&#x4EF6;&#x7684;&#x521D;&#x59CB;&#x5316;&#x8017;&#x65F6;&#x5F88;&#x5C11;&#xFF0C;&#x5219;&#x4F18;&#x5316;&#x7684;&#x6548;&#x679C;&#x4E0D;&#x660E;&#x663E;&#xFF0C;&#x53D1;&#x6325;&#x4E0D;&#x51FA;&#x5E76;&#x53D1;&#x521D;&#x59CB;&#x5316;&#x7684;&#x4F18;&#x52BF;&#x3002;</p>
+<h3 id="&#x9ED1;&#x79D1;&#x6280;">&#x9ED1;&#x79D1;&#x6280;</h3>
+<ul>
+<li>&#x542F;&#x52A8;&#x9636;&#x6BB5;&#x6291;&#x5236;GC</li>
+<li>CPU&#x9501;&#x9891;</li>
+<li>&#x6570;&#x636E;&#x91CD;&#x6392; <a href="https://github.com/facebook/redex" target="_blank">facebook redex</a></li>
+</ul>
 <footer class="page-footer"><span class="copyright">Copyright &#xA9; thismj.cn 2019 all right reserved&#xFF0C;powered by Gitbook</span><span class="footer-modification">&#x8BE5;&#x6587;&#x4EF6;&#x4FEE;&#x8BA2;&#x65F6;&#x95F4;&#xFF1A;
-2020-11-24 09:52:49
+2020-12-15 10:07:39
 </span></footer>
                                 
                                 </section>
@@ -413,12 +494,12 @@
 
             
                 
-                <a href="Kotlin.html" class="navigation navigation-prev " aria-label="Previous page: Kotlin">
+                <a href="AndroidX.html" class="navigation navigation-prev " aria-label="Previous page: AndroidX">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
                 
-                <a href="数据结构.html" class="navigation navigation-next " aria-label="Next page: 数据结构">
+                <a href="Gradle.html" class="navigation navigation-next " aria-label="Next page: Gradle">
                     <i class="fa fa-angle-right"></i>
                 </a>
                 
@@ -429,7 +510,7 @@
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"JVM","level":"1.2.3","depth":2,"next":{"title":"数据结构","level":"1.2.4","depth":2,"path":"interview/数据结构.md","ref":"interview/数据结构.md","articles":[]},"previous":{"title":"Kotlin","level":"1.2.2","depth":2,"path":"interview/Kotlin.md","ref":"interview/Kotlin.md","articles":[]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","etoc-plus","mermaid-gb3","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"github":{"url":"https://github.com/thismj"},"puml":{},"etoc-plus":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"mermaid-gb3":{},"expandable-chapters-small":{},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"interview/Jvm.md","mtime":"2020-11-24T01:52:49.747Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-12-15T02:09:08.113Z"},"basePath":"..","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Android性能优化","level":"1.2.9","depth":2,"next":{"title":"Gradle","level":"1.2.10","depth":2,"path":"interview/Gradle.md","ref":"interview/Gradle.md","articles":[]},"previous":{"title":"AndroidX","level":"1.2.8","depth":2,"path":"interview/AndroidX.md","ref":"interview/AndroidX.md","articles":[]},"dir":"ltr"},"config":{"plugins":["expandable-chapters-small","github","splitter","-lunr","-search","search-plus","advanced-emoji","puml","tbfed-pagefooter","todo","etoc-plus","mermaid-gb3","livereload"],"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"tbfed-pagefooter":{"copyright":"Copyright &copy thismj.cn 2019","modify_format":"YYYY-MM-DD HH:mm:ss","modify_label":"该文件修订时间："},"github":{"url":"https://github.com/thismj"},"puml":{},"etoc-plus":{},"livereload":{},"todo":{},"splitter":{},"fontsettings":{"theme":"white","family":"sans","size":2},"highlight":{},"mermaid-gb3":{},"expandable-chapters-small":{},"advanced-emoji":{"embedEmojis":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false},"search-plus":{}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"language":"zh-hans","links":{"sidebar":{"我的博客":"https://thismj.cn"}},"gitbook":"*"},"file":{"path":"interview/Android性能优化.md","mtime":"2020-12-15T02:07:39.485Z","type":"markdown"},"gitbook":{"version":"3.2.3","time":"2020-12-15T02:09:08.113Z"},"basePath":"..","book":{"language":""}});
         });
     </script>
 </div>

@@ -190,15 +190,13 @@ fun Canvas.drawTextByPoint(
 
 
 
-## Android gradle
-
-### ViewBinding
-
-
-
 ### 易出错的地方
 
 LayoutInflater inflate 时如果 parent 传了 ull，则根布局设置的 layout params 无效，所以在布局里面设置了 layout_width 也无济于事了。
+
+[[View not attached to window manager crash](https://stackoverflow.com/questions/22924825/view-not-attached-to-window-manager-crash)
+
+[Android Studio Logcat 打印不全](https://stackoverflow.com/questions/8888654/android-set-max-length-of-logcat-messages)
 
 
 
