@@ -15,6 +15,84 @@
 |            |                     |                                                              |
 | 墨绿色     | 其他时间/VSync 延迟 | 代表在连续两帧间的时间间隔,可能是因为子线程执行时间过长抢占了UI线程被cpu执行的机会. |
 
+### Systrace
+
+#### 使用
+
+```bash
+systrace工具位于：
+android-sdk/platform-tools/systrace/
+
+生成 html 报告：（Systrace does not support Python 3.7. Please use Python 2.7.）
+python systrace.py [options] [categories]
+```
+
+options：
+
+| options                                        | 解释                                                |
+| :--------------------------------------------- | :-------------------------------------------------- |
+| -o `<FILE`>                                    | 输出的目标文件                                      |
+| -t N, –time=N                                  | 指定执行时间（秒），不指定则按Enter键结束           |
+| -b N, –buf-size=N                              | buffer大小（单位KB),用于限制trace总大小，默认无上限 |
+| -k `<KFUNCS`>，–ktrace=`<KFUNCS`>              | 追踪kernel函数，用逗号分隔                          |
+| -a `<APP_NAME`>,–app=`<APP_NAME`>              | 追踪应用包名，用逗号分隔                            |
+| –from-file=`<FROM_FILE`>                       | 从文件中创建互动的systrace                          |
+| -e `<DEVICE_SERIAL`>,–serial=`<DEVICE_SERIAL`> | 指定设备                                            |
+| -l, –list-categories                           | 列举可用的categories                                |
+
+categories：
+
+```bash
+ gfx - Graphics
+       input - Input
+        view - View System
+     webview - WebView
+          wm - Window Manager
+          am - Activity Manager
+          sm - Sync Manager
+       audio - Audio
+       video - Video
+      camera - Camera
+         hal - Hardware Modules
+         app - Application
+         res - Resource Loading
+      dalvik - Dalvik VM
+          rs - RenderScript
+      bionic - Bionic C Library
+       power - Power Management
+          pm - Package Manager
+          ss - System Server
+    database - Database
+     network - Network
+       sched - CPU Scheduling
+        freq - CPU Frequency
+        idle - CPU Idle
+        load - CPU Load
+  memreclaim - Kernel Memory Reclaim
+  binder_driver - Binder Kernel driver
+  binder_lock - Binder global lock trace
+```
+
+示例：
+
+```bash
+$ python systrace.py -o mynewtrace.html sched freq idle am wm gfx view \
+binder_driver hal dalvik camera input res
+```
+
+APP自定义事件，需要指定 -a 包名选项
+
+```java
+Trace.beginSection("Event");
+Trace.endSection();
+```
+
+如果您多次调用 `beginSection()`，调用 `endSection()` 只会结束最后调用的 `beginSection()` 方法。请务必将每次对 `beginSection()` 的调用与一次对 `endSection()` 的调用正确匹配。此外，不能在一个线程上调用 `beginSection()`，而在另一个线程上结束它；您必须在同一个线程上调用这两个方法。如果在Application beginSection() 并在MainActivity endSection() ，系统的 Event 会使自己定义 beginSection() 错误结束，所以需要另外搞个线程。
+
+#### 分析
+
+[浏览 Systrace 报告](https://developer.android.google.cn/topic/performance/tracing/navigate-report?hl=zh-cn)
+
 ## 启动优化
 
 [深入探索Android启动速度优化（上）](https://juejin.cn/post/6844904093786308622#heading-69)
