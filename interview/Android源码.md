@@ -185,7 +185,169 @@ sequenceDiagram
     deactivate Instrumentation
     activate 目标Activity
     deactivate 目标Activity
-    
-    
-
 ```
+
+## setContentView()
+
+![](https://huangyu.github.io/archives/199d23fd/View%E7%BB%93%E6%9E%84.png)
+
+Activity 的 setContentView() 会调用 PhoneWindow 的 setContentView() 方法
+
+PhoneWindow.setContentView()
+
+```java
+public void setContentView(int layoutResID) {
+        // Note: FEATURE_CONTENT_TRANSITIONS may be set in the process of installing the window
+        // decor, when theme attributes and the like are crystalized. Do not check the feature
+        // before this happens.
+        if (mContentParent == null) {
+            //mContentParent即为id为 android.R.id.content 的ViewGroup
+            installDecor();
+        } else if (!hasFeature(FEATURE_CONTENT_TRANSITIONS)) {
+            mContentParent.removeAllViews();
+        }
+
+        if (hasFeature(FEATURE_CONTENT_TRANSITIONS)) {
+            final Scene newScene = Scene.getSceneForLayout(mContentParent, layoutResID,
+                    getContext());
+            transitionTo(newScene);
+        } else {
+            //将我们指定的 layoutResId inflate 到 mContentParent
+            mLayoutInflater.inflate(layoutResID, mContentParent);
+        }
+        mContentParent.requestApplyInsets();
+        final Callback cb = getCallback();
+        if (cb != null && !isDestroyed()) {
+            //回调 onContentChanged()
+            cb.onContentChanged();
+        }
+        mContentParentExplicitlySet = true;
+    }
+```
+
+PhoneWindow.installDecor()
+
+```java
+private void installDecor() {
+        mForceDecorInstall = false;
+        if (mDecor == null) {
+            //创建 PhoneWindow 里面的 DecorView 对象
+            mDecor = generateDecor(-1);
+            mDecor.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+            mDecor.setIsRootNamespace(true);
+            if (!mInvalidatePanelMenuPosted && mInvalidatePanelMenuFeatures != 0) {
+                mDecor.postOnAnimation(mInvalidatePanelMenuRunnable);
+            }
+        } else {
+            mDecor.setWindow(this);
+        }
+        if (mContentParent == null) {
+            //获取 DecorView 中 id 为 android.R.id.content 的 Viewgroup
+            mContentParent = generateLayout(mDecor);
+            
+            ......
+              
+        }
+    }
+```
+
+PhoneWindow.generateDecor()
+
+```java
+protected DecorView generateDecor(int featureId) {
+        // System process doesn't have application context and in that case we need to directly use
+        // the context we have. Otherwise we want the application context, so we don't cling to the
+        // activity.
+        Context context;
+        if (mUseDecorContext) {
+            Context applicationContext = getContext().getApplicationContext();
+            if (applicationContext == null) {
+                context = getContext();
+            } else {
+                context = new DecorContext(applicationContext, getContext().getResources());
+                if (mTheme != -1) {
+                    context.setTheme(mTheme);
+                }
+            }
+        } else {
+            context = getContext();
+        }
+        //New 根布局 DecorView
+        return new DecorView(context, featureId, this, getAttributes());
+    }
+```
+
+PhoneWindow.generateLayout()
+
+```java
+protected ViewGroup generateLayout(DecorView decor) {
+        // 处理主题的各种窗口属性、Flag，一大段逻辑
+        TypedArray a = getWindowStyle();
+
+        ......
+
+        mIsFloating = a.getBoolean(R.styleable.Window_windowIsFloating, false);
+        int flagsToUpdate = (FLAG_LAYOUT_IN_SCREEN|FLAG_LAYOUT_INSET_DECOR)
+                & (~getForcedWindowFlags());
+        if (mIsFloating) {
+            setLayout(WRAP_CONTENT, WRAP_CONTENT);
+            setFlags(0, flagsToUpdate);
+        } else {
+            setFlags(FLAG_LAYOUT_IN_SCREEN|FLAG_LAYOUT_INSET_DECOR, flagsToUpdate);
+        }
+
+        if (a.getBoolean(R.styleable.Window_windowNoTitle, false)) {
+            requestFeature(FEATURE_NO_TITLE);
+        } else if (a.getBoolean(R.styleable.Window_windowActionBar, false)) {
+            // Don't allow an action bar if there is no title.
+            requestFeature(FEATURE_ACTION_BAR);
+        }
+        ......
+          
+        // Inflate the window decor.
+        // DecorView 根据上面主题解析得到的各种属性、Flag，获取对应布局
+        int layoutResource;
+        int features = getLocalFeatures();
+        if ((features & (1 << FEATURE_SWIPE_TO_DISMISS)) != 0) {
+            layoutResource = R.layout.screen_swipe_dismiss;
+        } else if ((features & ((1 << FEATURE_LEFT_ICON) | (1 << FEATURE_RIGHT_ICON))) != 0) {
+            if (mIsFloating) {
+                TypedValue res = new TypedValue();
+                getContext().getTheme().resolveAttribute(
+                        R.attr.dialogTitleIconsDecorLayout, res, true);
+                layoutResource = res.resourceId;
+            } else {
+                layoutResource = R.layout.screen_title_icons;
+            }
+            // XXX Remove this once action bar supports these features.
+            removeFeature(FEATURE_ACTION_BAR);
+            // System.out.println("Title Icons!");
+        } else if ((features & ((1 << FEATURE_PROGRESS) | (1 << FEATURE_INDETERMINATE_PROGRESS))) != 0
+                && (features & (1 << FEATURE_ACTION_BAR)) == 0) {
+            // Special case for a window with only a progress bar (and title).
+            // XXX Need to have a no-title version of embedded windows.
+            layoutResource = R.layout.screen_progress;
+            // System.out.println("Progress!");
+        } 
+        
+        ......
+
+        mDecor.startChanging();
+        //DecorView 添加对应布局的 View
+        mDecor.onResourcesLoaded(mLayoutInflater, layoutResource);
+        //获取 id 为 android.R.id.content 的 ViewGroup
+        ViewGroup contentParent = (ViewGroup)findViewById(ID_ANDROID_CONTENT);
+        if (contentParent == null) {
+            throw new RuntimeException("Window couldn't find content container view");
+        }
+
+        ......
+
+        return contentParent;
+    }
+```
+
+至此，Activity 的 setContentView() 就完毕了，首先通过 PhoneWindow 来创建根布局 DecorView，然后 DecorView 根据 Activity 主题的不同属性和窗口功能来添加对应布局的View，最后在DecorView 中 id 为 android.R.id.content 的 ViewGroup 里面 inflate 我们指定的布局 id
+
+
+

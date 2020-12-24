@@ -120,7 +120,36 @@ Context的数量 = Activity的数量+Service的数量+1（Application）
 
   非Activity的Context parentWindow 为空所以不会调用 adjustLayoutParamsForSubWindow，从而引发 BadTokenException
 
-在View中对 context 强转出现 ClassCastException：android.view.ContextThemeWrapper cannot be cast to Activity
+在 View 中对 context 强转出现 ClassCastException：android.view.ContextThemeWrapper cannot be cast to Activity
+
+```java
+Dialog(@NonNull Context context, @StyleRes int themeResId, boolean createContextThemeWrapper) {
+        if (createContextThemeWrapper) {
+            if (themeResId == 0) {
+                final TypedValue outValue = new TypedValue();
+                context.getTheme().resolveAttribute(R.attr.dialogTheme, outValue, true);
+                themeResId = outValue.resourceId;
+            }
+            mContext = new ContextThemeWrapper(context, themeResId);
+        } else {
+            mContext = context;
+        }
+        ......
+    }
+```
+
+Dialog中的 Context 会被重新包装为 ContextThemeWrapper，所以 Dialog 中的 View 通过 getContext() 获取到的都是 ContextThemeWrapper，可以通过 getBaseContext() 获取到 Activity 实例。
+
+同理 ClassCastException：TintContextWrapper cannot be cast to Activity
+
+```java
+   public AppCompatTextView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(TintContextWrapper.wrap(context), attrs, defStyleAttr);
+        ......
+    }
+```
+
+AppCompat 的 View 获取到的是 TintContextWrapper（getResource() 具有对资源着色的能力）
 
 
 
@@ -154,6 +183,10 @@ FragmentPagerAdapter更多的用于相对静态的、少量界面的ViewPager，
 
 
 ## View
+
+
+
+
 
 ###EditText
 android:imeOptions 属性
