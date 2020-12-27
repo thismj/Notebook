@@ -349,5 +349,69 @@ protected ViewGroup generateLayout(DecorView decor) {
 
 至此，Activity 的 setContentView() 就完毕了，首先通过 PhoneWindow 来创建根布局 DecorView，然后 DecorView 根据 Activity 主题的不同属性和窗口功能来添加对应布局的View，最后在DecorView 中 id 为 android.R.id.content 的 ViewGroup 里面 inflate 我们指定的布局 id
 
+## View绘制流程
+
+Activity创建之后，调用 attch() 方法：
+
+```java
+final void attach(Context context, ActivityThread aThread,
+            Instrumentation instr, IBinder token, int ident,
+            Application application, Intent intent, ActivityInfo info,
+            CharSequence title, Activity parent, String id,
+            NonConfigurationInstances lastNonConfigurationInstances,
+            Configuration config, String referrer, IVoiceInteractor voiceInteractor,
+            Window window) {
+        attachBaseContext(context);
+
+        ......
+
+        //创建PhoneWindow
+        mWindow = new PhoneWindow(this, window);
+        mWindow.setWindowControllerCallback(this);
+        mWindow.setCallback(this);
+        mWindow.setOnWindowDismissedCallback(this);
+        
+        ......
+
+        //设置mWindowManager
+        mWindow.setWindowManager(
+                (WindowManager)context.getSystemService(Context.WINDOW_SERVICE),
+                mToken, mComponent.flattenToString(),
+                (info.flags & ActivityInfo.FLAG_HARDWARE_ACCELERATED) != 0);
+        if (mParent != null) {
+            mWindow.setContainer(mParent.getWindow());
+        }
+        mWindowManager = mWindow.getWindowManager();
+        ......
+    }
+```
+
+* ViewRootImpl创建时会通过 WindowManagerGlobal.getWindowSession() 获取 WindowSession 对象（WMS 的 openSession() 方法）
+*  一个ViewRootImpl 对象对应着一次 WindowManager.addView 中的View，并管理着这个 View 树的测量布局和绘制等工作，通过 WindowSession 对象与 WMS 交互
+```mermaid
+sequenceDiagram
+activate ActivityThread
+ActivityThread->>ActivityThread: performResumeActivity()
+ActivityThread->>WindowManagerImpl: addView(decorView, params)
+WindowManagerImpl->>WindowManagerGlobal: addView(decorView, params...)
+WindowManagerGlobal->>ViewRootImpl: new
+ViewRootImpl-->>WindowManagerGlobal: ViewRootImpl实例
+WindowManagerGlobal->>ViewRootImpl: setView(decorview...)
+ViewRootImpl->>ViewRootImpl: requestLayout()
+ViewRootImpl->>ViewRootImpl: checkThread()
+ViewRootImpl->>ViewRootImpl: scheduleTraversals()
+ViewRootImpl->>Choreographer: postCallback(TraversalRunnable)
+TraversalRunnable->>ViewRootImpl: doTraversal()
+ViewRootImpl->>ViewRootImpl: performTraversals()
+ViewRootImpl->>ViewRootImpl: performMeasure()
+ViewRootImpl->>ViewRootImpl: performLayout()
+ViewRootImpl->>ViewRootImpl: performDraw()
+ViewRootImpl->>IWindowSession: addToDisplay(IWindow...)
+
+
+```
+
+
+
 
 
