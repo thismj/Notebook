@@ -374,6 +374,10 @@ join() 方法用 synchronized 修饰，并且内部是用 wait() 方法来实现
 
 [java高并发程序设计1-线程停下来（stop,wait,suspend,await,interrupt,join,yield，sleep）的操作](https://blog.csdn.net/tangyuan_sibal/article/details/88695265)
 
+sleep
+
+Thread.sleep(0)的作用：使当前线程进入 RUNNABLE 的 Ready 状态，CPU重新调度线程
+
 stop
 
 过时，这方法会立刻释放线程所持有的锁，如果正在做同步操作，会产生很多未知的错误。
