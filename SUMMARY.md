@@ -8,6 +8,7 @@
         * [Android性能优化](technology/android/Android性能优化.md)
         * [Android源码](technology/android/Android源码.md)
         * [Android Gradle](technology/android/Gradle.md)
+        * [Android Studio](technology/android/AndroidStudio.md)
     * [编程语言](technology/language/README.md)
         * [Java](technology/language/Java.md)
         * [Kotlin](technology/language/Kotlin.md)

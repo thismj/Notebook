@@ -74,9 +74,110 @@ private set
 
 如今它成为底层支持多线程的协作式多任务组件，很好的解决了线程协作的痛点，同时也逐渐变得越来越受欢迎，协程和线程的关系更加亲密，它们似乎也变得更加相似。（如今你可以把协程视作一种轻量级线程）
 
+Kotlin中的协程:
+
+[开始使用Kotlin协程](https://www.jianshu.com/p/9f720b9ccdea)
+
+一个协程被 suspension point 分割为多个Continuation，内部维护了一个具有 suspension point + 1（初始状态）个的状态的状态机，通过调用 Continuation 的 resume() 方法，就会执行到下一个 Continuation，每一个 Continuation 可以（指定）运行在不同的线程上。
+
 ### 基本使用
 
 [协程基础](https://www.kotlincn.net/docs/reference/coroutines/basics.html)
+
+```kotlin
+fun main() {
+    //Dispatchers指定为Unconfined
+    GlobalScope.launch(Dispatchers.Unconfined) {
+        //initial continuation 执行在主线程
+        println("1 ${Thread.currentThread()} isDaemon=${Thread.currentThread().isDaemon}")
+        //Continuation 1 不确定会在那个线程执行
+        delay(1000)
+        //Continuation 2 不确定会在那个线程执行
+        println("2 ${Thread.currentThread()} isDaemon=${Thread.currentThread().isDaemon}")
+    }
+    println("3 ${Thread.currentThread()} isDaemon=${Thread.currentThread().isDaemon}")
+    //因为协程默认创建的线程是守护线程，所以为了防止主线程执行完毕之后虚拟机退出，在此sleep 2s
+    Thread.sleep(2000)
+}
+```
+
+上面代码执行结果：
+
+```bash
+1 Thread[main @coroutine#1,5,main] isDaemon=false
+3 Thread[main,5,main] isDaemon=false
+2 Thread[kotlinx.coroutines.DefaultExecutor @coroutine#1,5,main] isDaemon=true
+```
+
+`launch` 方法传入的参数为类型为 `CoroutineScope.() -> Unit` 的 lambda 表达式，即该 lambda 中 `this` 为协程作用域对象（CoroutineScope）
+
+---
+
+runBlocking、coroutineScope共同点：这两个作用域里面的协程体以及所有子协程结束之后，才会执行外层后续的逻辑。
+
+runBlocking、coroutineScope区别：
+
+```kotlin
+fun main() {
+    GlobalScope.launch(Dispatchers.Unconfined) {
+        coroutineScope {
+            launch {
+                println("A ${Thread.currentThread()}")
+                delay(200)
+                println("B ${Thread.currentThread()}")
+            }
+        }
+        println("C ${Thread.currentThread()}")
+    }
+    println("D ${Thread.currentThread()}")
+    Thread.sleep(500)
+}
+```
+
+`coroutineScope`作用域不会阻塞主线程，所以 `delay` 挂起协程之后，D 在主线程得以打印，然后需要等 `coroutineScope` 里面所有的协程体以及子协程执行结束之后，才会打印 C，输出如下：
+
+```bash
+A Thread[main @coroutine#2,5,main]
+D Thread[main,5,main]
+B Thread[kotlinx.coroutines.DefaultExecutor @coroutine#2,5,main]
+C Thread[kotlinx.coroutines.DefaultExecutor @coroutine#1,5,main]
+```
+
+```kotlin
+fun main() {
+    runBlocking {
+        launch {
+            println("A ${Thread.currentThread()}")
+            delay(200)
+            println("B ${Thread.currentThread()}")
+        }
+    }
+    println("C ${Thread.currentThread()}")
+}
+```
+
+`runBlocking` 作用域会阻塞主线程，所以协程 `delay` 挂起之后，协程不会释放主线程，而是使之阻塞，导致 C 无法提前打印，输出如下：
+
+```bash
+A Thread[main @coroutine#2,5,main]
+B Thread[main @coroutine#2,5,main]
+C Thread[main,5,main]
+```
+
+---
+
+[协程的取消与超时](https://www.kotlincn.net/docs/reference/coroutines/cancellation-and-timeouts.html#%E5%8F%96%E6%B6%88%E4%B8%8E%E8%B6%85%E6%97%B6)：
+
+`Job`是`launch`方法的返回值，它就是用来控制协程的运行状态的。`Job`中有几个关键方法：
+
+- start。如果是`CoroutineStart.LAZY`创建出来的协程，调用该方法开启协程。
+- cancel。取消正在执行的协程。如协程处于运算状态，则不能被取消。也就是说，只有协程处于阻塞状态时才能够取消。
+- join。阻塞父协程，直到本协程执行完。
+- cancelAndJoin。等价于`cancel` + `join`。
+
+在协程作用域中，可以通过扩展属性 `isActive` 判断 `Job` 是否存活（即没有执行完成或者没有被取消）
+
+
 
 
 
