@@ -111,6 +111,71 @@ fun main() {
 
 `launch` 方法传入的参数为类型为 `CoroutineScope.() -> Unit` 的 lambda 表达式，即该 lambda 中 `this` 为协程作用域对象（CoroutineScope）
 
+`withContext` 串行
+
+```kotlin
+fun main() = runBlocking {
+    val time = measureTimeMillis {
+        val one: Int = withContext(Dispatchers.Default) {
+            delay(1000)
+            13
+        }
+        val two: Int = withContext(Dispatchers.Default) {
+            delay(1000)
+            14
+        }
+        println("sum is ${one + two}")
+    }
+    println("cost $time ms")
+}
+```
+
+输出：
+
+```bash
+sum is 27
+cost 2027 ms
+```
+
+
+
+`asyn` 并发
+
+```kotlin
+fun main() = runBlocking {
+    val time = measureTimeMillis {
+        val one: Deferred<Int> = async {
+            delay(1000)
+            13
+        }
+        val two: Deferred<Int> = async {
+            delay(1000)
+            14
+        }
+        println("sum is ${one.await() + two.await()}")
+    }
+    println("cost $time ms")
+}
+```
+
+输出：
+
+```bash
+sum is 27
+cost 1024 ms
+```
+
+
+|  关键函数   | 返回  |  |
+|  ----  | ----  | ----|
+| launch  | Job |可以全局开启协程 GlobalScope.launch{} 返回|
+| runBlocking  | lambda返回值 |可以全局开启协程 runBlocking{}|
+| withContext  | lambda返回值 |只能在协程作用域里面调用|
+| withTimeout  | lambda返回值 |只能在协程作用域里面调用|
+| withTimeoutOrNull | lambda返回值或者超时后返回null | 只能在协程作用域里面调用 |
+| async  | Deferred<lambda返回值类型> |只能在协程作用域里面调用|
+
+
 ---
 
 runBlocking、coroutineScope共同点：这两个作用域里面的协程体以及所有子协程结束之后，才会执行外层后续的逻辑。
