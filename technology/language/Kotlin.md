@@ -166,14 +166,14 @@ cost 1024 ms
 ```
 
 
-|  关键函数   | 返回  |  |
-|  ----  | ----  | ----|
-| launch  | Job |可以全局开启协程 GlobalScope.launch{} 返回|
-| runBlocking  | lambda返回值 |可以全局开启协程 runBlocking{}|
-| withContext  | lambda返回值 |只能在协程作用域里面调用|
-| withTimeout  | lambda返回值 |只能在协程作用域里面调用|
-| withTimeoutOrNull | lambda返回值或者超时后返回null | 只能在协程作用域里面调用 |
-| async  | Deferred<lambda返回值类型> |只能在协程作用域里面调用|
+|  关键函数   | 返回  | 上下文 | 作用域 |
+|  ----  | ----  | ---- | ---- |
+| launch  | Job |可选CoroutineContext参数|可以全局开启协程 GlobalScope.launch{}|
+| runBlocking  | lambda返回值 |可选CoroutineContext参数|可以全局开启协程 runBlocking{}|
+| withContext  | lambda返回值 |必须指定CoroutineContext参数|只能在协程作用域里面调用|
+| withTimeout  | lambda返回值 |承袭外作用域CoroutineContext|只能在协程作用域里面调用|
+| withTimeoutOrNull | lambda返回值或者超时后返回null | 承袭外作用域CoroutineContext |只能在协程作用域里面调用|
+| async  | Deferred<lambda返回值类型> |可选CoroutineContext参数|只能在协程作用域里面调用|
 
 
 ---
@@ -242,6 +242,89 @@ C Thread[main,5,main]
 
 在协程作用域中，可以通过扩展属性 `isActive` 判断 `Job` 是否存活（即没有执行完成或者没有被取消）
 
+---
+
+[协程上下文与调度器](https://www.kotlincn.net/docs/reference/coroutines/coroutine-context-and-dispatchers.html)
+
+调度器使用
+
+```kotlin
+fun main(): Unit = runBlocking {
+    var index = 0
+    val fixThreadDispatcher =
+        Executors.newFixedThreadPool(3) { r -> Thread(r).also { it.name = "fixSize${++index}" } }
+            .asCoroutineDispatcher()
+
+    val singleThreadDispatcher =
+        Executors.newSingleThreadExecutor { r -> Thread(r).also { it.name = "single" } }
+            .asCoroutineDispatcher()
+
+    coroutineScope {
+        launch {
+            println("A ${Thread.currentThread()}")
+        }
+
+        launch(Dispatchers.Unconfined) {
+            println("B ${Thread.currentThread()}")
+        }
+
+        launch(Dispatchers.Default) {
+            println("C ${Thread.currentThread()}")
+        }
+
+        launch(Dispatchers.IO) {
+            println("D ${Thread.currentThread()}")
+        }
+
+        launch(singleThreadDispatcher) {
+            println("E ${Thread.currentThread()}")
+        }
+
+        launch(fixThreadDispatcher) {
+            println("F ${Thread.currentThread()}")
+        }
+
+        launch(fixThreadDispatcher) {
+            println("G ${Thread.currentThread()}")
+        }
+
+        launch(fixThreadDispatcher) {
+            println("H ${Thread.currentThread()}")
+        }
+
+        launch(fixThreadDispatcher) {
+            println("I ${Thread.currentThread()}")
+        }
+    }
+
+    singleThreadDispatcher.close()
+    fixThreadDispatcher.close()
+}
+```
+
+输出：
+
+```bash
+B Thread[main @coroutine#3,5,main]
+C Thread[DefaultDispatcher-worker-1 @coroutine#4,5,main]
+D Thread[DefaultDispatcher-worker-1 @coroutine#5,5,main]
+E Thread[single @coroutine#6,5,main]
+F Thread[fixSize1 @coroutine#7,5,main]
+G Thread[fixSize2 @coroutine#8,5,main]
+H Thread[fixSize3 @coroutine#9,5,main]
+I Thread[fixSize1 @coroutine#10,5,main]
+A Thread[main @coroutine#2,5,main]
+```
+
+|  调度器   | 说明  | 作用域 |
+|  ----  | ----  | ---- |
+| 不指定 | GlobalScope.launch则默认为Dispatchers.Default，其它情况承袭自父协程 | |
+| Dispatchers.Default  | 默认的调度器 | |
+| Dispatchers.Unconfined  | 非受限的调度器，在调用线程执行initial continuation（第一个挂起点之前），之后由继承自外部的调度器执行，通常代码不应该使用，因为在第一个挂起点之前不用进行协程调度 | |
+| Dispatchers.Io  |  | |
+| Dispatchers.Main  | Android平台特有的主线程调度器 | |
+| Executors.newSingleThreadExecutor().asCoroutineDispatcher()  | 单个线程的线程池调度器 | |
+| Executors.newFixedThreadPool(x).asCoroutineDispatcher() | 固定线程数的线程池调度器 | |
 
 
 
