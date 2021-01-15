@@ -302,7 +302,7 @@ fun main(): Unit = runBlocking {
 }
 ```
 
-输出：
+输出
 
 ```bash
 B Thread[main @coroutine#3,5,main]
@@ -316,17 +316,75 @@ I Thread[fixSize1 @coroutine#10,5,main]
 A Thread[main @coroutine#2,5,main]
 ```
 
-|  调度器   | 说明  | 作用域 |
+为什么 A 最后打印？A 协程没有指定上下文，在这里会继承父协程 runblocking 的调度器即 `BlockingEventLoop`，所以需要等父协程执行完毕才会轮到 A 协程执行，即 `fixThreadDispatcher.close()` 执行完毕之后，A协程才会被 BlockingEventLoop 调度执行。
+
+上下文调度器比较：
+
+|  调度器   | 说明  |  |
 |  ----  | ----  | ---- |
-| 不指定 | GlobalScope.launch则默认为Dispatchers.Default，其它情况承袭自父协程 | |
-| Dispatchers.Default  | 默认的调度器 | |
+| 不指定 | GlobalScope.launch则默认为Dispatchers.Default，其它情况继承自父协程 | |
+| Dispatchers.Default  | 默认的调度器，核心线程数为cpu核心数（最低为2）最大线程数为cpu核心数*128，但是需要在[核心线程数，（1 shl 21）-2 = 2097150] 范围内 | |
 | Dispatchers.Unconfined  | 非受限的调度器，在调用线程执行initial continuation（第一个挂起点之前），之后由继承自外部的调度器执行，通常代码不应该使用，因为在第一个挂起点之前不用进行协程调度 | |
-| Dispatchers.Io  |  | |
+| Dispatchers.IO | 也是用Dispatchers.Default调度，但是会限制并发数（默认为64），可以通过`kotlinx.coroutines.io.parallelism` 指定 | |
 | Dispatchers.Main  | Android平台特有的主线程调度器 | |
 | Executors.newSingleThreadExecutor().asCoroutineDispatcher()  | 单个线程的线程池调度器 | |
 | Executors.newFixedThreadPool(x).asCoroutineDispatcher() | 固定线程数的线程池调度器 | |
 
+IDEA&Android Studio 的 Kotlin 插件带有协程调试器，可以在 **Coroutines** 标签中查看各个调度器下的协程的状态，比如 `runBlocking` 这个协程的调度器叫 `BlockingEventLoop`，AS 进入 run->Edit Configuration 指定 JVM 参数 `-Dkotlinx.coroutines.debug` 开启调试选项
 
+![](https://www.kotlincn.net/assets/externals/docs/reference/coroutines/images/coroutine-idea-debugging-1.png)
+
+协程之间的关系，在父协程的 CoroutineScope 启动新的协程时，则新的协程通过 `CoroutineScope.coroutineContext` 继承了父协程的上下文调度器，为父协程的子协程，当父协程被取消时，所有的子协程都会被递归地取消，当父协程 `join` 的时候，会等待其所有的子协程执行完毕。而在 CoroutineScope 下用 GlobalScope 来启动一个新协程时，这个新协程是独立运行的，外层的协程取消时对它没有影响。
+
+```kotlin
+fun main() = runBlocking {
+
+    val parent = launch {
+        GlobalScope.launch {
+            println("independent start")
+            delay(1000)
+            println("independent end")
+        }
+
+        launch {
+            println("child start")
+            delay(1000)
+            println("child end")
+        }
+    }
+
+    delay(500)
+    parent.cancel()
+    delay(1000)
+    println("child not end??")
+}
+```
+
+输出：
+
+```bash
+independent start
+child start
+independent end
+child not end??
+```
+
+如何同时指定协程名字以及上下文调度器？
+
+```kotlin
+fun main() = runBlocking {
+    val job = launch(Dispatchers.Default + CoroutineName("testCoroutine")) {
+        println("${Thread.currentThread()}")
+    }
+    job.join()
+}
+```
+
+输出：
+
+```bash
+Thread[DefaultDispatcher-worker-1 @testCoroutine#2,5,main]
+```
 
 
 
