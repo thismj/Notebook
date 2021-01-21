@@ -50,7 +50,11 @@ var table: Map<String, Int>? = null
 private set
 ```
 
-## 
+##异常
+
+[浅谈Kotlin的Checked Exception机制](https://blog.csdn.net/guolin_blog/article/details/108817286)
+
+
 
 ## 协程
 
@@ -386,6 +390,97 @@ fun main() = runBlocking {
 Thread[DefaultDispatcher-worker-1 @testCoroutine#2,5,main]
 ```
 
+---
+
+如何用挂起函数封装现有的回调接口：
+
+```kotlin
+fun main() = runBlocking {
+    val job = launch {
+        try {
+            val data = getData()
+            println("data=$data")
+        } catch (e: Exception) {
+            println("e=$e")
+        }
+    }
+    delay(1000)
+    println("after 1s")
+    job.join()
+    println("end!!")
+}
+
+suspend fun getData() = suspendCoroutine<Int?> { continuation ->
+    getData(object : Callback {
+        override fun onSuccess(value: Int) {
+            continuation.resume(value)
+        }
+
+        override fun onFailed(throwable: Throwable) {
+            continuation.resumeWithException(throwable)
+        }
+    })
+}
+
+//模拟Java的回调方式，在新线程阻塞2s，返回数据
+fun getData(callback: Callback) {
+    Thread {
+        Thread.sleep(2000)
+        val random = (0..10).random()
+        if (random >= 5) {
+            callback.onSuccess(random)
+        } else {
+            callback.onFailed(IllegalAccessException("random is $random"))
+        }
+    }.start()
+}
+
+interface Callback {
+    fun onSuccess(value: Int)
+    fun onFailed(throwable: Throwable)
+}
+```
+
+正常输出：
+
+```bash
+after 1s
+data=7
+end!!
+```
+
+异常输出:
+
+```bash
+after 1s
+e=java.lang.IllegalAccessException: random is 3
+end!!
+```
+
+有个问题，如果外部协程取消了，`getData(callback: Callback)` 方法还是会继续执行，无法感知到协程的取消，此时可以用 suspendCancellableCoroutine 来感知协程的取消，从而取消对应的异步执行逻辑
+
+```kotlin
+suspend fun getData() = suspendCancellableCoroutine<Int?> { continuation ->
+    continuation.invokeOnCancellation { 
+        //执行的协程取消了
+        println("coroutine canceled!")
+        //取消下面异步执行的逻辑
+    }
+    getData(object : Callback {
+        override fun onSuccess(value: Int) {
+            continuation.resume(value)
+        }
+
+        override fun onFailed(throwable: Throwable) {
+            continuation.resumeWithException(throwable)
+        }
+    })
+}
+```
 
 
+
+## 其它
+
+获取随机数：
 
