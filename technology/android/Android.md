@@ -227,6 +227,126 @@ fun Canvas.drawTextByPoint(
 
 
 
+## Handler
+
+Handler机制基本原理图：
+
+![](https://i.iter01.com/images/779aa8eeb5d5481bd325e8312174455b5b9862dfca0fb21fe7ccb4025d56757a.jpg)
+
+线程使用 Handler 之前首先要创建该线程的 Looper 实例，然后调用 `Looper.loop()` 来开启消息循环。外部通过 Hander 实例来发送 Message，根据发送的时间排序插入到 MessageQueue（链表） 中，其中 Looper 不断循环地从 MessageQueue 中获取 Message，最后通过 Message 的 `target` 变量（即发送该 Message 的 Handler 实例） 的 `dispatchMessage` 方法回调给外部处理（`handleCallback` 或者 `handleMessage`）。
+
+```mermaid
+sequenceDiagram
+participant .
+participant Handler
+participant MessageQueue
+participant Looper
+Looper->>Looper: prepare()
+.->>Handler:  sendMessage()
+Looper->>Looper: loop()
+Handler->>Handler: sendMessageDelayed()
+Handler->>Handler: sendMessageAtTime()
+Handler->>Handler: enqueueMessage()
+Handler->>MessageQueue: enqueueMessage()
+Looper->>MessageQueue: next()
+MessageQueue-->>Looper: Message
+Looper->>Handler: dispatchMessage()
+Handler->>Handler: handleCallback() or handleMessage()
+
+
+```
+
+Message 对象需要通过 `obtain` 方法来获得（你要自己 new 也没办法），因为其内部维护了一个以单链表形式保存的对象池，能够重复利用 Message  对象，避免频繁的创建和回收，提升程序性能。Message 对象池最多能存 50 个对象，并且关键性操作都加了锁，是线程安全的。
+
+每个线程有且只有一个 Looper 对象，内部通过 ThreadLocal 来保存，使用 Handler 之前必须先通过 `Looper.prepare` 创建 Looper 对象
+
+Looper.java：
+
+```java
+// sThreadLocal.get() will return null unless you've called prepare().
+static final ThreadLocal<Looper> sThreadLocal = new ThreadLocal<Looper>();
+private static Looper sMainLooper;  // guarded by Looper.class
+
+......
+  
+public static void prepare() {
+      prepare(true);
+}
+
+private static void prepare(boolean quitAllowed) {
+        if (sThreadLocal.get() != null) {
+            throw new RuntimeException("Only one Looper may be created per thread");
+        }
+        sThreadLocal.set(new Looper(quitAllowed));
+}
+
+/**
+     * Initialize the current thread as a looper, marking it as an
+     * application's main looper. The main looper for your application
+     * is created by the Android environment, so you should never need
+     * to call this function yourself.  See also: {@link #prepare()}
+     */
+public static void prepareMainLooper() {
+       //主线程不允许quit
+       prepare(false);
+       synchronized (Looper.class) {
+            if (sMainLooper != null) {
+                throw new IllegalStateException("The main Looper has already been prepared.");
+            }
+            sMainLooper = myLooper();
+        }
+}
+
+/**
+ * Returns the application's main looper, which lives in the main thread of the application.
+ */
+public static Looper getMainLooper() {
+       synchronized (Looper.class) {
+           return sMainLooper;
+       }
+}
+
+......
+  
+/**
+ * Return the Looper object associated with the current thread.  Returns
+ * null if the calling thread is not associated with a Looper.
+ */
+public static @Nullable Looper myLooper() {
+     return sThreadLocal.get();
+}
+```
+
+Handler,java：
+
+```java
+public Handler(Callback callback, boolean async) {
+        if (FIND_POTENTIAL_LEAKS) {
+            //内部有检查Handler是否为内部静态类，警告内存泄漏，Google自己用的......吧！！
+            final Class<? extends Handler> klass = getClass();
+            if ((klass.isAnonymousClass() || klass.isMemberClass() || klass.isLocalClass()) &&
+                    (klass.getModifiers() & Modifier.STATIC) == 0) {
+                Log.w(TAG, "The following Handler class should be static or leaks might occur: " +
+                    klass.getCanonicalName());
+            }
+        }
+
+        mLooper = Looper.myLooper();
+        if (mLooper == null) {
+            //创建 Handler 对象时判断 Looper 是否准备好了 
+            throw new RuntimeException(
+                "Can't create handler inside thread that has not called Looper.prepare()");
+        }
+        mQueue = mLooper.mQueue;
+        mCallback = callback;
+        mAsynchronous = async;
+    }
+```
+
+
+
+
+
 
 
 ### 易出错的地方

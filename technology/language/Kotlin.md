@@ -594,6 +594,12 @@ invalid data Thread[DefaultDispatcher-worker-1 @coroutine#2,5,main]
 | onCompletion | 数据流发送并收集完成（正常或者异常），能观察到所有异常，但是不处理|
 | cancellable | 协程只有在挂起状态才能被cancel，所以异步流也一样，可以通过这个操作符在不挂起的情况下，也可以直接cancel |
 
+### 通道Channel
+
+类似于 BlockingQueue，提供了非阻塞的 `send` 和 `receive` 方法，生产者消费者模型，扇出即一对多的生产者消费者模式，扇入即多对一的生产者消费者模式。通道可以指定缓冲区，缓冲区内数据无需等待消费者。
+
+
+
 ## 注解
 
 ### @RestrictsSuspension
