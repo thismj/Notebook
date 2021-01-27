@@ -229,6 +229,8 @@ fun Canvas.drawTextByPoint(
 
 ## Handler
 
+### 基本原理
+
 Handler机制基本原理图：
 
 ![](https://i.iter01.com/images/779aa8eeb5d5481bd325e8312174455b5b9862dfca0fb21fe7ccb4025d56757a.jpg)
@@ -255,6 +257,8 @@ Handler->>Handler: handleCallback() or handleMessage()
 
 
 ```
+
+
 
 Message 对象需要通过 `obtain` 方法来获得（你要自己 new 也没办法），因为其内部维护了一个以单链表形式保存的对象池，能够重复利用 Message  对象，避免频繁的创建和回收，提升程序性能。Message 对象池最多能存 50 个对象，并且关键性操作都加了锁，是线程安全的。
 
@@ -287,7 +291,7 @@ private static void prepare(boolean quitAllowed) {
      * to call this function yourself.  See also: {@link #prepare()}
      */
 public static void prepareMainLooper() {
-       //主线程不允许quit
+       //UI主线程不允许quit
        prepare(false);
        synchronized (Looper.class) {
             if (sMainLooper != null) {
@@ -345,9 +349,127 @@ public Handler(Callback callback, boolean async) {
 
 
 
+### 不常用
+
+postSyncBarrier、removeSyncBarrier、setAsynchronous
+
+[Android消息机制之同步障碍机制和应用](https://blog.csdn.net/yanzhenjie1003/article/details/96497153)
+
+`postSyncBarrier` 会在指定的时间戳插入一条没有 target 的 Message，作为一个同步消息队列循环的屏障，当 Looper 轮询到该 Message 的时候，会优先把后续设置了 `setAsynchronous(true)` 的所有异步消息找出来执行。如果没有异步消息的话，Looper 的线程会通过调用 `nativePollOnce` 进入无限等待，直到 `enqueueMessage`新的消息或调用 removeSyncBarrier 移除掉这个同步屏障时，回调用 `nativeWake` 唤醒线程。`ViewRootImpl.scheduleTraversals()` 时用到了 `postSyncBarrier`。
+
+nativePollOnce、nativeWake
+
+当 MessageQueue 中没有可用的消息时，会通过 nativePollOnce 使线程进入阻塞状态，释放 CPU 资源，nativePollOnce 底层是通过 linux pipe/epoll 机制实现的，对某个文件描述符调用 epoll_wait，线程就会阻塞在管道的读端；当有新消息或者其他需要唤醒情况时，会通过 nativeWake 唤醒当前线程，nativeWake 底层通过往管道写端写入一个字节数据，从而唤醒线程从管道读端返回。nativePollOnce 大致等同于 Object.wait(), nativeWake 等同于 Object.notify(),只不过它们的实现完全不同: nativePollOnce使用 epoll, 而 Object.wait 使用 futex Linux 调用.
+
+IdelHandler应用
+
+```java
+//添加时有加锁，是线程安全的
+handler.getLooper().getQueue().addIdleHandler(IdleHandler handler)
+```
+
+当 MessageQueue 最近没有消息需要处理的时候，如果此时添加了 IdleHandler，则会去执行 IdleHandler 的 `queueIdle()` 方法，这个方法适合做一些需要在主线程空闲下来时对业务来说不太重要的事情。`queueIdle()` 返回 false 在本次空闲时执行后就会被自动 remove 掉，返回 true 代表本次空闲时执行后不 remove 掉。`MessageQueue.next()` 会遍历当前 Message 链表查找下一个需要处理的消息，如果始终没有消息的话，IdleHandler 是否会一直执行从而死循环？不会，因为只有在第一次循环的时候才会去处理 IdleHandler，后续除非有需要处理的消息了跳出此次循环，等再次进入循环遍历的时候才会继续又处理一次 IdleHandler。
+
+```java
+Message next() {
+        ......
+        int pendingIdleHandlerCount = -1; // -1 only during first iteration
+        int nextPollTimeoutMillis = 0;
+        for (;;) {
+            ......
+            nativePollOnce(ptr, nextPollTimeoutMillis);
+
+            synchronized (this) {
+                ......
+                //省略，如果遍历到了可处理的消息，则会直接return跳出循环
+
+                //pendingIdleHandlerCount<0才会进入此循环，所以只会在第一次循环的时候进入
+                if (pendingIdleHandlerCount < 0
+                        && (mMessages == null || now < mMessages.when)) {
+                    pendingIdleHandlerCount = mIdleHandlers.size();
+                }
+                if (pendingIdleHandlerCount <= 0) {
+                    // No idle handlers to run.  Loop and wait some more.
+                    mBlocked = true;
+                    continue;
+                }
+
+                if (mPendingIdleHandlers == null) {
+                    mPendingIdleHandlers = new IdleHandler[Math.max(pendingIdleHandlerCount, 4)];
+                }
+                mPendingIdleHandlers = mIdleHandlers.toArray(mPendingIdleHandlers);
+            }
+
+            // Run the idle handlers.
+            // We only ever reach this code block during the first iteration.
+            for (int i = 0; i < pendingIdleHandlerCount; i++) {
+                final IdleHandler idler = mPendingIdleHandlers[i];
+                mPendingIdleHandlers[i] = null; // release the reference to the handler
+
+                boolean keep = false;
+                try {
+                    keep = idler.queueIdle();
+                } catch (Throwable t) {
+                    Log.wtf(TAG, "IdleHandler threw exception", t);
+                }
+
+                if (!keep) {
+                    synchronized (this) {
+                        mIdleHandlers.remove(idler);
+                    }
+                }
+            }
+
+            //这个值置0，所以如果一直没有可处理的消息的话，IdleHandler不会重复执行，除非有新的消息处理跳出了本次循环
+            pendingIdleHandlerCount = 0;
+            ......
+        }
+    }
+```
 
 
 
+### 常见问题
+
+[Android中为什么主线程不会因为Looper.loop()里的死循环卡死？](https://www.zhihu.com/question/34652589)
+
+1. `Looper.loop` 开启消息循环处理，是保证主线程不退出的原因，其它 binder 线程（例如 ApplicationThread binder 对象）通过 Hander 往里面发送消息，所以主线程能够依次处理这些消息，保证 Android 生命周期有条不紊地进行。
+2. 当消息循环没有可用的消息时，会借助 linux 的 pipe/epoll 机制使主线程进入阻塞状态，让出 CPU 资源，当重新有可用的新消息时，又会重新唤醒主线程。
+
+[Android只在UI主线程修改UI，是个谎言吗？ 为什么这段代码能完美运行](https://www.zhihu.com/question/24764972)
+
+`ActivityThread.handleResumeActivity` 之后，会通过 WindowManager 添加当前 Activity 的顶级 DecorView，此时会生成与之对应的 ViewRootImpl 实例，并通过 ViewRootImpl  来进行控制 View 树的测量布局与绘制。ViewRootImpl 在对 View进行操作前，会通过 `checkThread`方法来判断创建该 ViewRootImpl 实例的线程与操作该 ViewRootImpl 实例的线程是否一致，不一致则抛出 `CalledFromWrongThreadException` 异常。在 Activity 的 onCreate() 方法中，此时还没有创建 ViewRootImpl 实例，View也没有回调 `dispatchAttachedToWindow` 方法，所以它的 `mAttachInfo` `mParent` 变量都为空，此时 `invalidateInternal()` 方法中判断它们 null 时，就不会去调用 ViewRootImpl  实例的`invalidateChild()`方法，所以在 Activity 的 onCreate() 方法中开个即时线程去更新 UI 是不会报错的。
+
+```java
+void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
+            boolean fullInvalidate) {
+        ......
+        if ((mPrivateFlags & (PFLAG_DRAWN | PFLAG_HAS_BOUNDS)) == (PFLAG_DRAWN | PFLAG_HAS_BOUNDS)
+                || (invalidateCache && (mPrivateFlags & PFLAG_DRAWING_CACHE_VALID) == PFLAG_DRAWING_CACHE_VALID)
+                || (mPrivateFlags & PFLAG_INVALIDATED) != PFLAG_INVALIDATED
+                || (fullInvalidate && isOpaque() != mLastIsOpaque)) {
+            ......
+            // Propagate the damage rectangle to the parent view.
+            final AttachInfo ai = mAttachInfo;
+            final ViewParent p = mParent;
+            //检查 mAttachInfo、mParent（通过View层级往上最终会到ViewRootImpl）是否为null
+            if (p != null && ai != null && l < r && t < b) {
+                final Rect damage = ai.mTmpInvalRect;
+                damage.set(l, t, r, b);
+                p.invalidateChild(this, damage);
+            }
+            .......
+        }
+    }
+```
+
+
+
+从上可知，如果我在子线程中通过 WindowManager 添加 View 时，就需要在这个子线程中去更新UI，并不是一定要在主线程更新UI，而是要在创建该ViewRootImpl 的线程中去更新它。Android约定需要在主线程中更新UI，主要是因为UI绘制需要高效进行，如果设计为可以在多线程在环境下更新UI，则必定要做很多同步机制，这会大大影响绘制效率，且会出现各种问题。
+
+HandlerThread
+
+HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.prepare()`、`Looper.loop()`
 
 ### 易出错的地方
 
