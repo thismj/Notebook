@@ -347,7 +347,48 @@ protected ViewGroup generateLayout(DecorView decor) {
     }
 ```
 
-至此，Activity 的 setContentView() 就完毕了，首先通过 PhoneWindow 来创建根布局 DecorView，然后 DecorView 根据 Activity 主题的不同属性和窗口功能来添加对应布局的View，最后在DecorView 中 id 为 android.R.id.content 的 ViewGroup 里面 inflate 我们指定的布局 id
+至此，Activity 的 setContentView() 就完毕了，首先通过 PhoneWindow 来创建根布局 DecorView，然后 DecorView 根据 Activity 主题的不同属性和窗口功能来添加对应布局的View，最后在DecorView 中 id 为 android.R.id.content 的 ViewGroup 里面 inflate 我们指定的布局 id。
+
+
+
+## Service的启动过程
+
+Application 跟 Activity 的 `startService()` 都继承自 ContextImpl，以下为启动 Service 的时序图：
+
+```mermaid
+sequenceDiagram
+.->>ContextImpl: startService()
+ContextImpl->>ContextImpl: startServiceCommon()
+ContextImpl->>ContextImpl: validateServiceIntent()
+ContextImpl->>ActivityManagerProxy: startService()
+ActivityManagerProxy->>ActivityManagerService: startService()
+ActivityManagerService->>ActiveServices: startServiceLocked()
+ActiveServices->>ActiveServices: startServiceInnerLocked()
+ActiveServices->>ActiveServices: bringUpServiceLocked()
+ActiveServices->>ActiveServices: realStartServiceLocked()
+ActiveServices->>ApplicationThreadProxy: scheduleCreateService()
+ApplicationThreadNative->>ApplicationThread: scheduleCreateService()
+ApplicationThread->>H: sendMessage(H.CREATE_SERVICE)
+H->>ActivityThread: handleCreateService()
+ActivityThread->>Service: attach()
+ActivityThread->>Service: onCreate()
+ActivityThread->>ActivityManagerProxy: serviceDoneExecuting()
+ActivityManagerProxy->>ActivityManagerService: serviceDoneExecuting()
+ActivityManagerService->>ActiveServices: serviceDoneExecutingLocked()
+ActiveServices->>ActiveServices: sendServiceArgsLocked()
+ActiveServices->>ApplicationThreadProxy: scheduleServiceArgs()
+ApplicationThreadProxy->>ApplicationThread: scheduleServiceArgs()
+ApplicationThread->>H: sendMessage(H.SERVICE_ARGS)
+H->>ActivityThread: handleServiceArgs()
+ActivityThread->>Service: onStartCommand()
+ActivityThread->>ActivityManagerProxy: serviceDoneExecuting()
+ActivityManagerProxy->>ActivityManagerService: serviceDoneExecuting()
+ActivityManagerService->>ActiveServices: serviceDoneExecutingLocked()
+
+```
+ContextImpl.validateServiceIntent(): 检查 Intent 是否显示指定 Service 组件，Android L 之后不允许隐式启动 Service。
+
+
 
 ## View绘制流程
 
@@ -410,4 +451,6 @@ ViewRootImpl->>IWindowSession: addToDisplay(IWindow...)
 
 
 ```
+
+## ANR
 

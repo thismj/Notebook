@@ -359,7 +359,7 @@ postSyncBarrier、removeSyncBarrier、setAsynchronous
 
 nativePollOnce、nativeWake
 
-当 MessageQueue 中没有可用的消息时，会通过 nativePollOnce 使线程进入阻塞状态，释放 CPU 资源，nativePollOnce 底层是通过 linux pipe/epoll 机制实现的，对某个文件描述符调用 epoll_wait，线程就会阻塞在管道的读端；当有新消息或者其他需要唤醒情况时，会通过 nativeWake 唤醒当前线程，nativeWake 底层通过往管道写端写入一个字节数据，从而唤醒线程从管道读端返回。nativePollOnce 大致等同于 Object.wait(), nativeWake 等同于 Object.notify(),只不过它们的实现完全不同: nativePollOnce使用 epoll, 而 Object.wait 使用 futex Linux 调用.
+当 MessageQueue 中没有可用的消息时，会通过 nativePollOnce 使线程进入阻塞状态，释放 CPU 资源，nativePollOnce 底层是通过 linux pipe（？？？eventfd？？Android M）/epoll 机制实现的，对某个文件描述符调用 epoll_wait，线程就会阻塞在管道的读端；当有新消息或者其他需要唤醒情况时，会通过 nativeWake 唤醒当前线程，nativeWake 底层通过往管道写端写入一个字节数据，从而唤醒线程从管道读端返回。nativePollOnce 大致等同于 Object.wait(), nativeWake 等同于 Object.notify(),只不过它们的实现完全不同: nativePollOnce使用 epoll, 而 Object.wait 使用 futex Linux 调用.
 
 IdelHandler应用
 
@@ -470,6 +470,32 @@ void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
 HandlerThread
 
 HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.prepare()`、`Looper.loop()`
+
+### 问题
+1.子线程一定不能更新UI吗？(校招&实习)
+2.给我说说Handler的原理(校招&实习)
+3.Handler导致的内存泄露你是如何解决的？
+4.如何使用Handler让子线程和子线程通信？
+5.你能给我说说Handler的设计原理？
+6.HandlerThread是什么 & 原理 & 使用场景？
+7.IdleHandler是什么？
+8.一个线程能否创建多个Handler,Handler和Looper之间的对应关系？
+9.为什么Android系统不建议子线程访问UI？
+10.Looper死循环为什么不会导致应用卡死？
+11.使用Handler的postDealy后消息队列有什么变化？
+12.可以在子线程直接new一个Handler出来吗？
+13.Message对象创建的方式有哪些 & 区别？
+14.ANR和Handler存在什么联系吗？
+15.子线程的Looper和主线程的Looper有什么区别？
+16.说说Handler为什么不能进行跨进程通信？[为什么Android的Handler采用管道而不使用Binder？](https://www.zhihu.com/question/44329366)
+17.Handler的消息延时是如何实现的？
+18.什么是消息屏障？
+19.假设主线程new了Handler A和Handler B以及Handler C,现在有个子线程，在子线程中通过Handler C发送了一条消息，那么Handler A和Handler B能接收到吗？为什么？
+
+## 
+
+
+
 
 ### 易出错的地方
 
