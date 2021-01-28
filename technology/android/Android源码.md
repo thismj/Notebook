@@ -454,3 +454,154 @@ ViewRootImpl->>IWindowSession: addToDisplay(IWindow...)
 
 ## ANR
 
+### 触发原理
+
+#### Service
+
+启动或者绑定 Service 时，一个生命周期流程（APP进程和System_Server进程交互）create、start、bind 等，每个周期都会在 AMS 中记录一个超时时间，前台服务为 20s，后台服务为 200s，如果超出时间还没有处理完，则会出发 ANR 事件。
+
+举例，记录 Service 创建即 create 周期超时的调用在 AMS 的 `realStartServiceLocked` 方法中：
+
+```java
+    private final void realStartServiceLocked(ServiceRecord r,
+            ProcessRecord app, boolean execInFg) throws RemoteException {
+        ......
+        //Service创建超时记录
+        bumpServiceExecutingLocked(r, execInFg, "create");
+        ......
+        try {
+            ......
+            app.thread.scheduleCreateService(r, r.serviceInfo,
+                    mAm.compatibilityInfoForPackageLocked(r.serviceInfo.applicationInfo),
+                    app.repProcState);
+            ......
+        } catch (DeadObjectException e) {
+            ......
+        } finally {
+            ......
+        }
+        ......
+    }
+```
+
+`bumpServiceExecutingLocked`
+
+```java
+private final void bumpServiceExecutingLocked(ServiceRecord r, boolean fg, String why) {
+        ......
+        if (r.executeNesting == 0) {
+            r.executeFg = fg;
+            ServiceState stracker = r.getTracker();
+            if (stracker != null) {
+                stracker.setExecuting(true, mAm.mProcessStats.getMemFactorLocked(), now);
+            }
+            if (r.app != null) {
+                r.app.executingServices.add(r);
+                r.app.execServicesFg |= fg;
+                if (r.app.executingServices.size() == 1) {
+                   //前台服务？？？
+                    scheduleServiceTimeoutLocked(r.app);
+                }
+            }
+        } else if (r.app != null && fg && !r.app.execServicesFg) {
+            r.app.execServicesFg = true;
+            //后台服务？？？
+            scheduleServiceTimeoutLocked(r.app);
+        }
+        ......
+    }
+```
+
+`scheduleServiceTimeoutLocked`
+
+```java
+void scheduleServiceTimeoutLocked(ProcessRecord proc) {
+        if (proc.executingServices.size() == 0 || proc.thread == null) {
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        Message msg = mAm.mHandler.obtainMessage(
+                ActivityManagerService.SERVICE_TIMEOUT_MSG);
+        msg.obj = proc;
+        //前台服务20s，后台服务是它的10倍
+        mAm.mHandler.sendMessageAtTime(msg,
+                proc.execServicesFg ? (now+SERVICE_TIMEOUT) : (now+ SERVICE_BACKGROUND_TIMEOUT));
+    }
+```
+
+如果在超时时间内完成了操作，即移除掉超时消息，在 AMS 的 `serviceDoneExecutingLocked` 方法中
+
+```java
+private void serviceDoneExecutingLocked(ServiceRecord r, boolean inDestroying,
+            boolean finishing) {
+        ......
+        if (r.executeNesting <= 0) {
+            if (r.app != null) {
+                r.app.execServicesFg = false;
+                r.app.executingServices.remove(r);
+                if (r.app.executingServices.size() == 0) {
+                    //当前服务所在进程中没有正在执行的service
+                    mAm.mHandler.removeMessages(ActivityManagerService.SERVICE_TIMEOUT_MSG, r.app);
+                }
+           ......
+        }
+    }
+```
+
+如果超时时间内没有完成，则在 AMS 的 MainHandler 处理该超时消息：
+
+```java
+final class MainHandler extends Handler {
+    public void handleMessage(Message msg) {
+        switch (msg.what) {
+            case SERVICE_TIMEOUT_MSG: {
+                ......
+                mServices.serviceTimeout((ProcessRecord)msg.obj);
+            } break;
+            ......
+        }
+        ......
+    }
+}
+```
+
+`ActiveServices.serviceTimeout`
+
+```java
+void serviceTimeout(ProcessRecord proc) {
+        String anrMessage = null;
+        ......
+        if (anrMessage != null) {
+            //触发ANR
+            mAm.mAppErrors.appNotResponding(proc, null, null, false, anrMessage);
+        }
+    }
+```
+
+### BroadcastReceiver
+
+BroadcastQueue.BroadcastHandler 收到`BROADCAST_TIMEOUT_MSG`消息时触发
+
+对于广播队列有两个: foreground 队列和 background 队列:
+
+- 对于前台广播，则超时为BROADCAST_FG_TIMEOUT = 10s；
+- 对于后台广播，则超时为BROADCAST_BG_TIMEOUT = 60s
+
+### ContentProvider
+
+AMS.MainHandler收到 `CONTENT_PROVIDER_PUBLISH_TIMEOUT_MSG` 消息时触发, 超时时间为 `CONTENT_PROVIDER_PUBLISH_TIMEOUT = 10s`,跟前面的Service和BroadcastQueue完全不同, 由Provider[进程启动](http://gityuan.com/2016/10/09/app-process-create-2/)过程相关
+
+### input事件
+
+[Input系统—启动篇](http://gityuan.com/2016/12/10/input-manager/)
+
+Input模块的主要组成：
+
+- ；
+- Native层的InputDispatcher接收来自InputReader的输入事件，并记录WMS的窗口信息，用于派发事件到合适的窗口；
+- Java层的InputManagerService跟WMS交互，WMS记录所有窗口信息，并同步更新到IMS，为InputDispatcher正确派发事件到ViewRootImpl提供保障；
+
+1. Native层的InputReader负责从EventHub取出事件并处理，再交给InputDispatcherInputDispatcher中会启动一个Thread,这个thread在threadLoop()中调用dispatchOnce检查EventHub从 /dev/input 的设备结点中是否有事件传递过来，
+2. 当有事件过来后，会根据focus 来找到对应window 处理key,touch 或者其它事件。
+3. 在事件产生时记录一个 timestamp,之后处理的时候再记录一个timestamp，那么如果时间差大于 INPUT_TIMEOUT 或者 SERVICE_TIMEOUT，那么就会报ANR问题了。
+
