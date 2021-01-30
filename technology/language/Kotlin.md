@@ -50,7 +50,11 @@ var table: Map<String, Int>? = null
 private set
 ```
 
-## 
+##异常
+
+[浅谈Kotlin的Checked Exception机制](https://blog.csdn.net/guolin_blog/article/details/108817286)
+
+
 
 ## 协程
 
@@ -394,4 +398,224 @@ A Thread[DefaultDispatcher-worker-1 @Launch Coroutine#1,5,main]
 B Thread[DefaultDispatcher-worker-2 @Scope Coroutine#2,5,main]
 ```
 
+---
 
+如何用挂起函数封装现有的回调接口：
+
+```kotlin
+fun main() = runBlocking {
+    val job = launch {
+        try {
+            val data = getData()
+            println("data=$data")
+        } catch (e: Exception) {
+            println("e=$e")
+        }
+    }
+    delay(1000)
+    println("after 1s")
+    job.join()
+    println("end!!")
+}
+
+suspend fun getData() = suspendCoroutine<Int?> { continuation ->
+    getData(object : Callback {
+        override fun onSuccess(value: Int) {
+            continuation.resume(value)
+        }
+
+        override fun onFailed(throwable: Throwable) {
+            continuation.resumeWithException(throwable)
+        }
+    })
+}
+
+//模拟Java的回调方式，在新线程阻塞2s，返回数据
+fun getData(callback: Callback) {
+    Thread {
+        Thread.sleep(2000)
+        val random = (0..10).random()
+        if (random >= 5) {
+            callback.onSuccess(random)
+        } else {
+            callback.onFailed(IllegalAccessException("random is $random"))
+        }
+    }.start()
+}
+
+interface Callback {
+    fun onSuccess(value: Int)
+    fun onFailed(throwable: Throwable)
+}
+```
+
+正常输出：
+
+```bash
+after 1s
+data=7
+end!!
+```
+
+异常输出:
+
+```bash
+after 1s
+e=java.lang.IllegalAccessException: random is 3
+end!!
+```
+
+有个问题，如果外部协程取消了，`getData(callback: Callback)` 方法还是会继续执行，无法感知到协程的取消，此时可以用 suspendCancellableCoroutine 来感知协程的取消，从而取消对应的异步执行逻辑
+
+```kotlin
+suspend fun getData() = suspendCancellableCoroutine<Int?> { continuation ->
+    continuation.invokeOnCancellation { 
+        //执行的协程取消了
+        println("coroutine canceled!")
+        //取消下面异步执行的逻辑
+    }
+    getData(object : Callback {
+        override fun onSuccess(value: Int) {
+            continuation.resume(value)
+        }
+
+        override fun onFailed(throwable: Throwable) {
+            continuation.resumeWithException(throwable)
+        }
+    })
+}
+```
+
+### 异步流（Flow）
+
+先看如何创建一个同步流，在主线程通过阻塞线程模拟获得一个同步的事件流，sequence传入的 lambda SequenceScope作为接受者，内部不允许调用其它挂起函数。
+
+```kotlin
+fun main() {
+    sequence {
+        for (i in 1..3) {
+            Thread.sleep(1000)
+            println("yield i=$i ${Thread.currentThread()}")
+            yield(i)
+        }
+    }.forEachIndexed { index, i ->
+        println("index=$index i=$i ${Thread.currentThread()}")
+    }
+}
+```
+
+输出
+
+```bash
+yield i=1 Thread[main,5,main]
+index=0 i=1 Thread[main,5,main]
+yield i=2 Thread[main,5,main]
+index=1 i=2 Thread[main,5,main]
+yield i=3 Thread[main,5,main]
+index=2 i=3 Thread[main,5,main]
+```
+
+创建异步流：
+
+```kotlin
+fun main() = runBlocking {
+    flow {
+        for (i in 1..3) {
+            try {
+                //getData()是上面定义的挂起函数
+                val data = getData()
+                println("emit $data ${Thread.currentThread()}")
+                emit(data)
+            } catch (e: IllegalAccessException) {
+                println("invalid data ${Thread.currentThread()}")
+            }
+        }
+        //指定异步流发送的协程
+    }.flowOn(Dispatchers.Default)
+        .collect {
+            println("collect $it ${Thread.currentThread()}")
+        }
+}
+```
+
+输出，在 worker线程协程#2 发送数据流，在主线程协程#1收集数据流；流的发送总是在调用的协程上下文执行，不能通过 withContext 等切换协程，只能通过 flowOn 方法切换发送数据的协程。
+
+```bash
+emit 6 Thread[DefaultDispatcher-worker-1 @coroutine#2,5,main]
+collect 6 Thread[main @coroutine#1,5,main]
+emit 9 Thread[DefaultDispatcher-worker-1 @coroutine#2,5,main]
+collect 9 Thread[main @coroutine#1,5,main]
+invalid data Thread[DefaultDispatcher-worker-1 @coroutine#2,5,main]
+```
+
+创建 Flow 的方式：
+
+```kotlin
+    flow {
+        for (i in 1..3) {
+            emit(i)
+        }
+    }
+
+    flowOf(1, "2", 6.0f)
+
+    (1..3).asFlow()
+
+    listOf(2, "3").asFlow()
+```
+
+过渡流操作符
+|  操作符 | 作用|
+| -- | --|
+| filter |  过滤数据流 |
+| distinctUntilChanged |   过滤相同数据 |
+| transform |  转换，一对多映射，可以转换为多个其它数据 |
+| map |  数据转换，一对一映射，转换为一个其它数据     |
+| flatMapConcat |  数据转换，一对一映射，映射为一个新的数据流Flow，顺序收集，等新的Flow收集完毕再发送下一个值     |
+| flatMapConcat |  数据转换，一对一映射，映射为一个新的数据流Flow，并发收集，可以指定最大的并发流的个数    |
+| take |  限制数据流长度    |
+| conflate |  当收集比发送慢时，只收集目前最新的值  |
+| zip |  组合多个流，每个流都有新值产生的时候再组合 |
+| combine |  组合多个流，与zip的区别在于无论哪个数据流产生了新的值都进行组合 |
+| filter |  过滤数据流 |
+| buffer |  当收集比发送慢时，开启新的协程去做发送操作，并缓存数据流，提升效率 |
+| mapLatest、transferLatest、collectLatest、flatMapLatest |  如果有新的数据过来，但是上次的数据还在处理（挂起），则丢弃这次数据，重新发送最新的值 |
+| onEach | 传入一个lambda，对发送的每个数据做一些操作  |
+
+末端流操作符
+
+| 操作符       | 作用                                                   |
+| ------------ | ------------------------------------------------------ |
+| collect      | 收集数据流                                             |
+| toList/toSet | 数据流转换为集合                                       |
+| reduce       |                                                        |
+| fold         |                                                        |
+| launchIn     | 在单独的协程中收集流，对比 flowOn 在单独的协程中发送流 |
+|              |                                                        |
+|              |                                                        |
+|              |                                                        |
+
+流异常
+| 操作符       | 作用             |
+| ------------ | ---------------- |
+| catch      | 捕获并处理上游异常       |
+| onCompletion | 数据流发送并收集完成（正常或者异常），能观察到所有异常，但是不处理|
+| cancellable | 协程只有在挂起状态才能被cancel，所以异步流也一样，可以通过这个操作符在不挂起的情况下，也可以直接cancel |
+
+### 通道Channel
+
+类似于 BlockingQueue，提供了非阻塞的 `send` 和 `receive` 方法，生产者消费者模型，扇出即一对多的生产者消费者模式，扇入即多对一的生产者消费者模式。通道可以指定缓冲区，缓冲区内数据无需等待消费者。
+
+
+
+## 注解
+
+### @RestrictsSuspension
+
+初步理解，当一个类或接口具有该注解并作为函数的接受者时，在函数里面只能调用自己的成员挂起函数或扩展挂起函数，不能调用任意其它的挂起函数。
+
+
+
+## 其它
+
+获取随机数：
