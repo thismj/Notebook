@@ -369,23 +369,29 @@ independent end
 child not end??
 ```
 
-如何同时指定协程名字以及上下文调度器？
+如何同时指定协程名字以及上下文调度器？CoroutineContext 重写了 `+` 操作符，可以通过相加的方式合并多个 CoroutineContext，CoroutineScope 也扩展了 `+` 方法，可以直接跟 CoroutineContext 相加得到新的 CoroutineScope 作用域。
 
 ```kotlin
-fun main() = runBlocking {
-    val job = launch(Dispatchers.Default + CoroutineName("testCoroutine")) {
-        println("${Thread.currentThread()}")
+val scope = CoroutineScope(Dispatchers.Default) + CoroutineName("Scope Coroutine")
+
+fun main(){
+    GlobalScope.launch(Dispatchers.Default + CoroutineName("Launch Coroutine")) {
+        println("A ${Thread.currentThread()}")
     }
-    job.join()
+
+    scope.launch {
+        println("B ${Thread.currentThread()}")
+    }
+    
+    Thread.sleep(500)
 }
 ```
 
 输出：
 
 ```bash
-Thread[DefaultDispatcher-worker-1 @testCoroutine#2,5,main]
+A Thread[DefaultDispatcher-worker-1 @Launch Coroutine#1,5,main]
+B Thread[DefaultDispatcher-worker-2 @Scope Coroutine#2,5,main]
 ```
-
-
 
 
