@@ -595,13 +595,117 @@ AMS.MainHandler收到 `CONTENT_PROVIDER_PUBLISH_TIMEOUT_MSG` 消息时触发, �
 
 [Input系统—启动篇](http://gityuan.com/2016/12/10/input-manager/)
 
-Input模块的主要组成：
+1. EventHub 通过 `getEvents` 获取 /dev/input 设备节点的输入事件
+2. InputReader线程循环地通过 EventHub 去读取输入事件，一旦有输入事件则将其放在 mInBoundQueue 队列，并唤醒 InputDispatcher 线程
+3. InputDispatcher线程是一个Looper线程，循环从 mInBoundQueue 队列中获取输入事件，然后根据焦点找到对应的 window 来处理
 
-- ；
-- Native层的InputDispatcher接收来自InputReader的输入事件，并记录WMS的窗口信息，用于派发事件到合适的窗口；
-- Java层的InputManagerService跟WMS交互，WMS记录所有窗口信息，并同步更新到IMS，为InputDispatcher正确派发事件到ViewRootImpl提供保障；
+事件1过来了，此时没有正在处理的事件，则分发事件1，并重置事件开始处理的时间timestamp，如果此时事件2过来了，但是事件1还在处理中，则通过之前记录的 timestamp 来判断是否超过5s，如果超过了则通知系统上报 ANR 了。
 
-1. Native层的InputReader负责从EventHub取出事件并处理，再交给InputDispatcherInputDispatcher中会启动一个Thread,这个thread在threadLoop()中调用dispatchOnce检查EventHub从 /dev/input 的设备结点中是否有事件传递过来，
-2. 当有事件过来后，会根据focus 来找到对应window 处理key,touch 或者其它事件。
-3. 在事件产生时记录一个 timestamp,之后处理的时候再记录一个timestamp，那么如果时间差大于 INPUT_TIMEOUT 或者 SERVICE_TIMEOUT，那么就会报ANR问题了。
+### 信息收集
+
+[Android EventLog含义](http://gityuan.com/2016/05/15/event-log/)
+
+[linux /proc/loadavg(平均负载)](https://www.cnblogs.com/276815076/archive/2012/06/11/2544937.html)
+
+不管是Service、Broadcast还是 input 的 ANR，最终的收集都会走到  `AppErrors.appNotResponding()`方法:
+
+```java
+final void appNotResponding(ProcessRecord app, ActivityRecord activity,
+            ActivityRecord parent, boolean aboveSystem, final String annotation) {
+        ......
+        //记录当前anr的时间
+        long anrTime = SystemClock.uptimeMillis();
+        
+        synchronized (mService) {
+            ......
+            //输出EventLog，它的格式定义在/system/etc/event-log-tags，平常开发时可以通过 logcat -b events 
+            EventLog.writeEvent(EventLogTags.AM_ANR, app.userId, app.pid,
+                    app.processName, app.info.flags, annotation);
+            ......
+        }
+        ......
+
+        StringBuilder info = new StringBuilder();
+        info.setLength(0);
+        //ANR进程名字
+        info.append("ANR in ").append(app.processName);
+        if (activity != null && activity.shortComponentName != null) {
+            info.append(" (").append(activity.shortComponentName).append(")");
+        }
+        info.append("\n");
+        //ANR进程ID
+        info.append("PID: ").append(app.pid).append("\n");
+        if (annotation != null) {
+            //ANR原因，是Service、Broadcast还是input事件导致的
+            info.append("Reason: ").append(annotation).append("\n");
+        }
+        if (parent != null && parent != activity) {
+            info.append("Parent: ").append(parent.shortComponentName).append("\n");
+        }
+
+        ProcessCpuTracker processCpuTracker = new ProcessCpuTracker(true);
+
+        String[] nativeProcs = NATIVE_STACKS_OF_INTEREST;
+        // don't dump native PIDs for background ANRs
+        File tracesFile = null;
+        if (isSilentANR) {
+            tracesFile = mService.dumpStackTraces(true, firstPids, null, lastPids,
+                null);
+        } else {
+            //写入trace文件（路径定义在dalvik.vm.stack-trace-file属性），第一个标志位clearTraces为true时，如果trace文件存在则先删除
+            tracesFile = mService.dumpStackTraces(true, firstPids, processCpuTracker, lastPids,
+                nativeProcs);
+        }
+
+        String cpuInfo = null;
+        if (ActivityManagerService.MONITOR_CPU_USAGE) {
+            mService.updateCpuStatsNow();
+            synchronized (mService.mProcessCpuTracker) {
+                //ANR时间点之前的CPU使用信息
+                cpuInfo = mService.mProcessCpuTracker.printCurrentState(anrTime);
+            }
+            //1、5、15分钟内CPU的平均负载（记录在设备节点/proc/loadavg），查看cpu核心数可以通过 cat /proc/cpuinfo
+            info.append(processCpuTracker.printCurrentLoad());
+            info.append(cpuInfo);
+        }
+        //ANR时间点之前的CPU使用信息
+        info.append(processCpuTracker.printCurrentState(anrTime));
+        //输出 ANR in 日志到控制台.
+        Slog.e(TAG, info.toString());
+        if (tracesFile == null) {
+            // There is no trace file, so dump (only) the alleged culprit's threads to the log
+            Process.sendSignal(app.pid, Process.SIGNAL_QUIT);
+        }
+
+        mService.addErrorToDropBox("anr", app, app.processName, activity, parent, annotation,
+                cpuInfo, tracesFile, null);
+
+        ......
+
+        synchronized (mService) {
+            ......
+            // Bring up the infamous App Not Responding dialog
+            Message msg = Message.obtain();
+            HashMap<String, Object> map = new HashMap<String, Object>();
+            msg.what = ActivityManagerService.SHOW_NOT_RESPONDING_UI_MSG;
+            msg.obj = map;
+            msg.arg1 = aboveSystem ? 1 : 0;
+            map.put("app", app);
+            if (activity != null) {
+                map.put("activity", activity);
+            }
+            //ANR弹窗
+            mService.mUiHandler.sendMessage(msg);
+        }
+    }
+```
+
+分析ANR：
+
+1. 查看 event log 中的 `am_anr (User|1|5),(pid|1|5),(Package Name|3),(Flags|1|5),(reason|3)` 打印，确定anr发生的进程信息以及原因（Service、Brocast、input）
+2. 查看 main log 中 `ANR in` 的打印， 这里的日志也可以查看一些进程必要信息以及原因、CPU 在过去 1、5、15 分钟的平均负载，各个进程的CPU占用率等
+3. 查看 /data/anr/trace.txt 文件
+4. trace.txt文件只会存最近一次发生的 ANR，会把之前发生过的覆盖掉，所有有时还需要 /data/system/dropbox 文件夹下面 `system_app_anr@时间戳.txt.gz` 文件
+
+
 
