@@ -125,6 +125,8 @@ Trace.endSection();
 * CPU锁频
 * 数据重排 [facebook redex](https://github.com/facebook/redex)
 
+## 内存优化
 
+移动设备采用的 RAM 是 LPDDR（Low Power DDR），即“低功耗双倍数据速率内存”，相比于 DDR 来说功耗更低。
 
 

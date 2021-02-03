@@ -413,6 +413,12 @@ interrupt/interrupted/isInterrupted
 
 带 blocker 的 park 方法可以提供传递给开发人员更多的信息，帮助监视工具和诊断工具确定线程收阻塞的原因。
 
+#### ThreadLocal
+
+每个线程在使用 ThreaLocal 变量时都会初始化一个完全独立的副本来保证线程安全。
+
+ThreaLocal 是一个泛型类，可以接受任何类型的对象。Thread 实例里面有个类型为 ThreaLocal.ThreadLocalMap 的 threadLocals 变量，实际上 ThreaLocal 是对这个  ThreadLocalMap 集合的封装，这个Map是专门给 ThreaLocal 而设计的，它的元素 Entry 继承自 WeakReference<ThreadLocal>，key 就是 ThreaLocal  对象的弱引用，所以当外部不存在对 ThreaLocal 对象的强引用时，在下一次GC的时候会自动回收 ThreadLocal 对象。
+
 ### 锁
 
 [面试必问的CAS，你懂了吗？](https://zhuanlan.zhihu.com/p/34556594)
