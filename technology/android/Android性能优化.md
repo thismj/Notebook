@@ -93,6 +93,16 @@ Trace.endSection();
 
 [浏览 Systrace 报告](https://developer.android.google.cn/topic/performance/tracing/navigate-report?hl=zh-cn)
 
+### memory-profiler
+
+[memory-profiler](https://developer.android.com/studio/profile/memory-profiler)
+
+7.1版本及以下存在诸多限制，要在 8.0 之后才有比较完整的体验。这个工具可以如下一些事情：
+
+* 记录应用程序一段时间内的内存分配情况，并提供图形化的界面分析工具，能够追踪到对象的分配堆栈以及跳转到对应的源码
+* 捕获应用程序某个时间点的堆内存快照，例如可以在反复多次进出 Activity 之后进行捕获，如果堆快照中还存在该 Activity 实例则代表泄漏
+* 保存 Android 格式的 .hprof 文件，可以用 android_sdk/platform-tools/ 的 hprof-conv 工具转换为 Java SE HPROF 格式
+
 ## 启动优化
 
 [深入探索Android启动速度优化（上）](https://juejin.cn/post/6844904093786308622#heading-69)
