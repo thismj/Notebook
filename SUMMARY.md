@@ -7,6 +7,7 @@
         * [AndroidX](technology/android/AndroidX.md)
         * [Android性能优化](technology/android/Android性能优化.md)
         * [Android源码](technology/android/Android源码.md)
+        * [Android虚拟机](technology/android/Android虚拟机.md)
         * [Android Gradle](technology/android/Gradle.md)
         * [Android Studio](technology/android/AndroidStudio.md)
     * [编程语言](technology/language/README.md)
