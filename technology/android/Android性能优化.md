@@ -101,7 +101,7 @@ Trace.endSection();
 
 * 记录应用程序一段时间内的内存分配情况，并提供图形化的界面分析工具，能够追踪到对象的分配堆栈以及跳转到对应的源码
 * 捕获应用程序某个时间点的堆内存快照，例如可以在反复多次进出 Activity 之后进行捕获，如果堆快照中还存在该 Activity 实例则代表泄漏
-* 保存 Android 格式的 .hprof 文件，可以用 android_sdk/platform-tools/ 的 hprof-conv 工具转换为 Java SE HPROF 格式
+* 保存 Android 格式的 .hprof（Heap Profiler ） 文件，可以用 android_sdk/platform-tools/ 的 hprof-conv 工具转换为 Java SE HPROF 格式
 
 ## 启动优化
 
@@ -142,7 +142,40 @@ Trace.endSection();
 ### 内存优化的意义
 
 	1. 防止OOM，提高应用稳定性
- 	2. 减少内存占用，降低被LMK机制杀死的概率
- 	3. 避免不合理使用内存导致GC太频繁，造成应用卡顿
- 	4. 减少异常发生和代码逻辑隐患
+	2. 减少内存占用，降低被LMK机制杀死的概率
+	3. 避免不合理使用内存导致GC太频繁，造成应用卡顿
+	4. 减少异常发生和代码逻辑隐患
+
+### 内存泄漏
+
+#### 发生场景
+1. 集合类添加元素后，没有及时清理，导致无法被回收
+
+2. 显式引用对象在其生命周期之外
+
+   * 静态引用或者在单例中引用Context、Fragment、View等具有特定生命周期的对象；
+
+3. 非静态内部类、匿名内部类默认持有外部类的引用
+
+   * 继承自 `Handler` 的非静态内部类，持有外部类 Activity 的引用，而其 `MessageQueue` 持有的 `Message` 对象又通过 `target` 成员变量持有 `Handler` 的引用，或者通过 post 方法添加的 Runnable 匿名内部类对象也持有 Activity 的引用，当 `Handler` 消息没有处理完毕，而 Activity 已经结束生命周期时就会导致泄漏；
+
+   * 使用匿名内部类方式实现 Thread、AsyncTask、Runnable 以及各类接口 Callback 等，由于它持有外部类的引用，如果外部类生命周期结束但其任务没有处理完毕，则会泄漏外部类实例；
+
+4. 资源使用后未关闭
+
+   * `registerReceiver` 后没有及时 `unregisterReceiver`、
+   * IO流、数据库游标Cursor使用完毕后没有及时关闭、
+
+5. 其它
+
+   * 属性动画持有 View 的引用，没有在 Activity销毁之时及时取消；
+   * RecyclerView
+
+   
+
+   
+
+   
+
+   
 
