@@ -149,33 +149,30 @@ Trace.endSection();
 ### 内存泄漏
 
 #### 发生场景
-1. 集合类添加元素后，没有及时清理，导致无法被回收
-
-2. 显式引用对象在其生命周期之外
+1. 显式引用对象在其生命周期之外
 
    * 静态引用或者在单例中引用Context、Fragment、View等具有特定生命周期的对象；
 
-3. 非静态内部类、匿名内部类默认持有外部类的引用
+2. 非静态内部类、匿名内部类默认持有外部类的引用
 
    * 继承自 `Handler` 的非静态内部类，持有外部类 Activity 的引用，而其 `MessageQueue` 持有的 `Message` 对象又通过 `target` 成员变量持有 `Handler` 的引用，或者通过 post 方法添加的 Runnable 匿名内部类对象也持有 Activity 的引用，当 `Handler` 消息没有处理完毕，而 Activity 已经结束生命周期时就会导致泄漏；
-
    * 使用匿名内部类方式实现 Thread、AsyncTask、Runnable 以及各类接口 Callback 等，由于它持有外部类的引用，如果外部类生命周期结束但其任务没有处理完毕，则会泄漏外部类实例；
+   * RecyclerView的Adapter作为Fragment的成员变量场景。Fragment添加到栈中，只会销毁View，不会回收Fragment对象，所以Adapter对象也不会被回收，但是 Adapter->mObservable(AdapterDataObservable RV的静态内部类)->mObserver(RecyclerViewDataObserver RV的非静态内部类，持有RecyclerView的引用)，最终导致无法回收RecyclerView对象，造成RecyclerView的泄漏。
 
-4. 资源使用后未关闭
+3. 集合类添加元素后，没有及时清理，导致无法被回收
 
-   * `registerReceiver` 后没有及时 `unregisterReceiver`、
-   * IO流、数据库游标Cursor使用完毕后没有及时关闭、
+   * `registerReceiver` 后没有及时 `unregisterReceiver`,（LoadedApk里面有个 mReceivers 的集合，里面持有 BroadcastReceiver 的引用，导致 Activity 无法被回收；AMS里面也会持有对端的引用）
 
-5. 其它
+4. IO流、数据库游标Cursor使用完毕后没有及时关闭；
 
-   * 属性动画持有 View 的引用，没有在 Activity销毁之时及时取消；
-   * RecyclerView
+5. 属性动画持有 View 的引用，没有在 Activity 销毁之时及时取消；
 
-   
 
-   
 
-   
 
-   
+
+
+
+
+
 

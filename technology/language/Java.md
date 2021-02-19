@@ -6,16 +6,16 @@
 
 ### 基本类型
 
-| 类型    | 封装类型  | 长度  | 取值范围                       |
-| ------- | --------- | ----- | ------------------------------ |
-| byte    | Byte      | 1字节 | -2^7 ~ 2^7-1                   |
-| short   | Short     | 2字节 | -2^15 ~ 2^15-1                 |
-| int     | Integer   | 4字节 | -2^31 ~ 2^31-1                 |
-| long    | Long      | 8字节 | -2^63 ~ 2^63-1                 |
-| float   | Float     | 4字节 | 1.401298e-45 ~ 3.402823e+38    |
-| double  | Double    | 8字节 | 4.9000000e-324 ~ 1.797693e+308 |
-| char    | Character | 2字节 | 0 ~ 65535                      |
-| boolean | Boolean   | ?     | true 、false                   |
+| 类型    | 封装类型  | 长度  | 取值范围                                                     |
+| ------- | --------- | ----- | ------------------------------------------------------------ |
+| byte    | Byte      | 1字节 | -2^7 ~ 2^7-1 [byte 取值范围](https://www.runoob.com/note/45389) |
+| short   | Short     | 2字节 | -2^15 ~ 2^15-1                                               |
+| int     | Integer   | 4字节 | -2^31 ~ 2^31-1                                               |
+| long    | Long      | 8字节 | -2^63 ~ 2^63-1                                               |
+| float   | Float     | 4字节 | 1.401298e-45 ~ 3.402823e+38                                  |
+| double  | Double    | 8字节 | 4.9000000e-324 ~ 1.797693e+308                               |
+| char    | Character | 2字节 | 0 ~ 65535                                                    |
+| boolean | Boolean   | ?     | true 、false                                                 |
 
 [参考文章]((https://www.zhihu.com/question/39462340)
 上面基本类型的字节长度是从 Java 语言角度来表述的，其明确了不同类型的取值范围。但是 JVM 在字节码层面上支持的整数类型只有 int 和 long（为啥？JVM 字节码指令是单字节的，最多只有256条，为了节省指令数目，不可能每种类型都占用一个指令），所有比 int 小的整数类型都会被提升为 int 来运算，所以单纯从运算效率来看，使用byte、 short  跟 int、long 没有啥区别。但是基本类型作为对象的字段或者数组元素储存时，确实是占用上表中对应的字节长度，所以使用合适的基本类型是可以节省空间的。
@@ -33,7 +33,44 @@ byte b2 = 12;
 b2 += 128; //隐式向下转型，被编译成 b2 = (byte)(b2 + 128)
 ```
 
-> A compound assignment expression of the form E1 op= E2 is equivalent to E1 = (T)((E1) op >(E2)), where T is the type of E1, except that E1 is evaluated only once.
+> A compound assignment expression of the form  is equivalent to E1 = (T)((E1) op (E2)), where T is the type of E1, except that E1 is evaluated only once. （E1 op= E2 E1只取址一次，读写地址保证一致；E1 = E1 op E2 取址两次，右边读取一次，左边赋值取一次）
+
+[15.26.2. Compound Assignment Operators](https://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.26.2)
+
+### 类
+
+#### 非静态内部类&匿名内部类持有外部引用
+
+看一段代码，Test.Java
+
+```java
+public class Test {
+    public void test(Runnable runnable) {
+        new Runnable() {
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
+    }
+}
+```
+
+经过 javac 编译之后，生成两个 class 文件，Test.class、Test$1.class，反编译生成的匿名内部类文件：
+
+```bash
+➜  ~ javap -p /Users/aero.tang/IdeaProjects/Heyraud-Daily-Java/out/production/Heyraud-Daily-Java/Test\$1.class
+Compiled from "Test.java"
+class Test$1 implements java.lang.Runnable {
+  final java.lang.Runnable val$runnable;
+  final Test this$0;
+  Test$1(Test, java.lang.Runnable);
+  public void run();
+}
+```
+
+由上可知，匿名内部类在编译之后生成了一个带有两个参数的构造函数，并由此持有外部类 Test 以及外部方法传参 runnable 的引用。
+
 
 
 ###  自动装箱与拆箱
@@ -49,7 +86,11 @@ b2 += 128; //隐式向下转型，被编译成 b2 = (byte)(b2 + 128)
 
 [JAVA 中的 StringBuilder 和 StringBuffer 适用的场景是什么？](https://www.zhihu.com/question/20101840)
 
-[Java 中 String 类为什么要设计成不可变的](https://zhuanlan.zhihu.com/p/115322967)
+[Java 中 String 类为什么要设计成不可变的](https://blog.csdn.net/renfufei/article/details/16808775)
+
+* 保证线程安全
+* 字符串常量池的前提
+* hashcode缓存，提升Hash集合类性能
 
 [请别再拿“String s = new String("xyz");创建了多少个String实例”来面试了吧](https://www.iteye.com/blog/rednaxelafx-774673)
 
