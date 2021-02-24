@@ -590,7 +590,130 @@ BitmapFactory.decodeResourceStream()
 BitmapFactory.decodeStream()
 ```
 
-`decodeFile` `decodeResource` `decodeResourceStream` 最终会都调用 `decodeStream`，``decodeResource` 在解析时会根据资源文件夹以及设备的屏幕像素密度来做合适的
+`decodeFile` `decodeResource` `decodeResourceStream` 最终会都调用 `decodeStream`，`decodeResource` 在解析时会根据资源文件夹（inDensity）以及设备本身（inTargetDensity）的屏幕像素密度来做合适的缩放。
+
+### BitmapFactory.Options
+
+创建 Bitmap 时可以穿入 Options 对象配置参数：
+
+#### inScale、inDensity、inTargetDensity：
+
+如果`inScaled` 指定为 true 或者不指定（Options 构造函数默认置 true），则 decode 的时候会根据 `inDensity`、`inTargetDensity` 来进行缩放：
+
+`BitmapFactory.cpp doDecode()`
+
+```c++
+static jobject doDecode(JNIEnv* env, SkStreamRewindable* stream, jobject padding, jobject options) {
+    ......
+    if (options != NULL) {
+        sampleSize = env->GetIntField(options, gOptions_sampleSizeFieldID);
+        // Correct a non-positive sampleSize.  sampleSize defaults to zero within the
+        // options object, which is strange.
+        if (sampleSize <= 0) {
+            sampleSize = 1;
+        }
+        ...
+        //inScaled为true
+        if (env->GetBooleanField(options, gOptions_scaledFieldID)) {
+            const int density = env->GetIntField(options, gOptions_densityFieldID);
+            const int targetDensity = env->GetIntField(options, gOptions_targetDensityFieldID);
+            const int screenDensity = env->GetIntField(options, gOptions_screenDensityFieldID);
+            if (density != 0 && targetDensity != 0 && density != screenDensity) {
+                //根据inDensity、inTargetDensity 计算缩放比例 
+                scale = (float) targetDensity / density;
+            }
+        }
+    }
+    ...
+    int scaledWidth = size.width();
+    int scaledHeight = size.height();
+    bool willScale = false;
+
+    // Apply a fine scaling step if necessary.
+    if (needsFineScale(codec->getInfo().dimensions(), size, sampleSize)) {
+        willScale = true;
+        scaledWidth = codec->getInfo().width() / sampleSize;
+        scaledHeight = codec->getInfo().height() / sampleSize;
+    }
+    ...
+    // Scale is necessary due to density differences.
+    if (scale != 1.0f) {
+        willScale = true;
+        //根据缩放比例计算bitmap实际decode的宽高
+        scaledWidth = static_cast<int>(scaledWidth * scale + 0.5f);
+        scaledHeight = static_cast<int>(scaledHeight * scale + 0.5f);
+    }
+    ...
+    return GraphicsJNI::createBitmap(env, javaAllocator.getStorageObjAndReset(),
+            bitmapCreateFlags, ninePatchChunk, ninePatchInsets, -1);
+}
+```
+
+#### inJustDecodeBounds、inSampleSize
+
+inJustDecodeBounds 指定为 true 时，不会真正 decode ，不会分配像素内存数据，可以用于在创建 bitmap 之前获取图片的原始宽高跟 mime 类型：
+
+```kotlin
+val options = BitmapFactory.Options()
+options.inJustDecodeBounds = true
+val bitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower, options)
+
+Log.d(TAG, "bitmap=$bitmap")
+Log.d(TAG, "options.outWidth=${options.outWidth}")
+Log.d(TAG, "options.outHeight=${options.outHeight}")
+Log.d(TAG, "options.outMimeType=${options.outMimeType}")
+```
+
+```bash
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: bitmap=null
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outWidth=276
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outHeight=214
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outMimeType=image/png
+```
+
+inSampleSize 设置采样率，缩小原始图片大小。例如在 drawable-mdpi（160DPI） 放置了一张图片，原始分辨率为 276*214，在 400 DPI 的设备上加载，并设置采样率 inSampleSize = 2，看创建出来的 Bitmap 有多大？根据上面的分析，最终创建出来的位图宽应该为：
+$$
+outWidth = originalWidth\div{inSampleSize}*\frac{inTargetDensity}{inDensity}
+$$
+即 `276/2*(400/160) = 345`，通过代码验证一致：
+
+```kotlin
+options.inJustDecodeBounds = false
+options.inSampleSize = 2
+val scaleBitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower, options)
+Log.d(TAG, "scaleBitmap.width=${scaleBitmap.width}")
+Log.d(TAG, "scaleBitmap.height=${scaleBitmap.height}")
+```
+
+```bash
+2021-02-24 12:00:21.555 3671-3671/? D/MainActivity: scaleBitmap.width=345
+2021-02-24 12:00:21.555 3671-3671/? D/MainActivity: scaleBitmap.height=268
+```
+
+#### inpreferredConfig
+
+指定图片解码时首选的颜色模式配置，默认为 `Bitmap.Config.ARGB_8888`
+
+| Bitmap.Config | 说明                                                         |      |
+| :------------ | :----------------------------------------------------------- | ---- |
+| ALPHA_8       | 每个 pixel 占 8 位，存储的是图片的透明值，占 1 个字节        |      |
+| RGB_565       | 每个 pixel 占 16 位，分别为 5-R、6-G、5-B 通道，没有 ALPHA 通道，占 2 个字节 |      |
+| ARGB_4444     | 每个 pixel 占 16 位，即每个通道用 4 位表示，占 2 个字节（质量太差，过时了） |      |
+| ARGB_8888     | 每个 pixel 占 32 位，每个通道用 8 位表示,占 4 个字节         |      |
+
+#### InBitmap、inMutable
+
+使用 InBitmap 能够复用 Bitmap 内存块（必须是 Mutable 的），避免大块内存的重新分配与回收。
+
+[Android Bitmap inBitmap 图片复用？](https://www.zhihu.com/question/32232584)
+
+#### inPremultiplied
+
+ALPHA通道预乘，默认为true。View系统跟 Canvas 默认绘制的图像都会通过预乘处理，所以不能设置为false，否则会抛出异常。
+
+### Bitmap占多大内存
+
+
 
 
 ### 易出错的地方
