@@ -492,9 +492,105 @@ HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.p
 18.什么是消息屏障？
 19.假设主线程new了Handler A和Handler B以及Handler C,现在有个子线程，在子线程中通过Handler C发送了一条消息，那么Handler A和Handler B能接收到吗？为什么？
 
-## 
+## 屏幕适配
+
+### 屏幕基础知识
+
+**屏幕尺寸**：指手机屏幕对角线的长度，单位为英寸：inch，1inch = 2.54cm
+
+**像素点**：手机屏幕的最小构成单元（Pixel）
+
+**分辨率**：手机屏幕（横屏）宽度像素点数x高度像素点数，例如 1280x720（720P）1920x1080（1080P），其中720、1080代表纵向（高度）有多少行像素，P代表逐行扫描，2560x1440（2K）、3840x2160（4K），代表横向（宽度）大于 2000、4000 列像素；720i、1080i，i代表隔行扫描。[1080p」和「2k、4k」的关系与差别在哪里](https://www.zhihu.com/question/24205632)
+
+**像素密度**：对于 Android 来说，即 PPI（Pixels Per Inch，每 inch 占的像素点数）或者 DPI（Dots Per Inch，这个实际上是用于打印机的，代表每 inch 墨点数）。例如小米，屏幕分辨率为3200x1440，尺寸为6.81 inch，则其像素密度 PPI（DPI） 为：
+$$
+\sqrt(3200^2+1440^2)\div6.81 = 515
+$$
+
+**PX**：即 Pixel，像素单位，屏幕分辨率使用的单位也就是 PX
+
+**PT**：标准的长度单位，1pt＝1/72 inch
+
+**DP**：即 DIP，Density-independent Pixels，密度无关像素单位。规定分辨率 320×480，尺寸 3.6 inch 的屏幕像素密度（160dpi）定义为标准像素密度，此时 1DP = 1PX，所以 DP 跟 PX 的换算关系为：
+$$
+PX = DP*\frac{DPI}{160}
+$$
+
+**SP**：scaled pixels，跟 DP 类似，但是会根据系统设置的字体大小偏好进行缩放
 
 
+
+adb查看屏幕参数信息：
+
+```bash
+➜  ~ adb shell dumpsys window displays | head -n 3
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=0
+    init=1080x1920 400dpi cur=1920x1080 app=1920x1080 rng=1080x1020-1920x1860
+    
+➜  ~ adb shell wm size
+Physical size: 1080x1920
+
+➜  ~ adb shell wm density                            
+Physical density: 400
+```
+
+代码中获取屏幕信息：
+
+```kotlin
+  val metrics = resources.displayMetrics
+  Log.d(TAG, "metrics.widthPixels=${metrics.widthPixels}")
+  Log.d(TAG, "metrics.heightPixels=${metrics.heightPixels}")
+  //DPI的一个比例因子，120DPI：0.75f，160DPI：1.0f，240DPI：1.5f
+  Log.d(TAG, "metrics.density=${metrics.density}")
+  Log.d(TAG, "metrics.densityDpi=${metrics.densityDpi}")
+  Log.d(TAG, "metrics.scaledDensity=${metrics.scaledDensity}")
+  Log.d(TAG, "metrics.xdpi=${metrics.xdpi}")
+  Log.d(TAG, "metrics.ydpi=${metrics.ydpi}")
+```
+
+```bash
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.widthPixels=1920
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.heightPixels=1080
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.density=2.5
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.densityDpi=400
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.scaledDensity=2.5
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.xdpi=320.0
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.ydpi=320.0
+```
+
+
+
+| 密度限定符 | 说明                                                         |
+| :--------- | :----------------------------------------------------------- |
+| `ldpi`     | 适用于低密度 (ldpi) 屏幕 (~ 120dpi) 的资源。                 |
+| `mdpi`     | 适用于中密度 (mdpi) 屏幕 (~ 160dpi) 的资源（这是基准密度）。 |
+| `hdpi`     | 适用于高密度 (hdpi) 屏幕 (~ 240dpi) 的资源。                 |
+| `xhdpi`    | 适用于加高 (xhdpi) 密度屏幕 (~ 320dpi) 的资源。              |
+| `xxhdpi`   | 适用于超超高密度 (xxhdpi) 屏幕 (~ 480dpi) 的资源。           |
+| `xxxhdpi`  | 适用于超超超高密度 (xxxhdpi) 屏幕 (~ 640dpi) 的资源。        |
+| `nodpi`    | 适用于所有密度的资源。这些是与密度无关的资源。无论当前屏幕的密度是多少，系统都不会缩放以此限定符标记的资源。 |
+| `tvdpi`    | 适用于密度介于 mdpi 和 hdpi 之间的屏幕（约 213dpi）的资源。这不属于“主要”密度组。它主要用于电视，而大多数应用都不需要它。对于大多数应用而言，提供 mdpi 和 hdpi 资源便已足够，系统将视情况对其进行缩放。如果您发现有必要提供 tvdpi 资源，应按一个系数来确定其大小，即 1.33*mdpi。例如，如果某张图片在 mdpi 屏幕上的大小为 100px x 100px，那么它在 tvdpi 屏幕上的大小应该为 133px x 133px。 |
+
+
+
+## Bitmap
+
+位图，储存像素信息的数据结构（通过某种方式用Bit来映射色值），通过它可以得到一系列的图像属性，还可以对图像进行旋转，切割，放大，缩小等操作。
+
+### 创建Bitmap
+
+需要通过 BitmapFactory 来创建 Bitmap
+
+```kotlin
+BitmapFactory.decodeByteArray()
+BitmapFactory.decodeFile()
+BitmapFactory.decodeResource()
+BitmapFactory.decodeResourceStream()
+BitmapFactory.decodeStream()
+```
+
+`decodeFile` `decodeResource` `decodeResourceStream` 最终会都调用 `decodeStream`，``decodeResource` 在解析时会根据资源文件夹以及设备的屏幕像素密度来做合适的
 
 
 ### 易出错的地方
