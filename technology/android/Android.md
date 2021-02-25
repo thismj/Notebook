@@ -692,7 +692,7 @@ Log.d(TAG, "scaleBitmap.height=${scaleBitmap.height}")
 
 #### inpreferredConfig
 
-指定图片解码时首选的颜色模式配置，默认为 `Bitmap.Config.ARGB_8888`
+指定图片解码时**首选（非强制[Android inpreferredconfig参数分析](https://blog.csdn.net/ccpat/article/details/46834089)）**的颜色模式配置，默认为 `Bitmap.Config.ARGB_8888`
 
 | Bitmap.Config | 说明                                                         |      |
 | :------------ | :----------------------------------------------------------- | ---- |
@@ -713,6 +713,75 @@ ALPHA通道预乘，默认为true。View系统跟 Canvas 默认绘制的图像�
 
 ### Bitmap占多大内存
 
+[Android 开发绕不过的坑：你的 Bitmap 究竟占多大内存？](https://cloud.tencent.com/developer/article/1071001)
+
+用上面 inSampleSize 的例子，drawable-mdpi（160DPI） 放置一张原始分辨率为 276*214，在 400 DPI 的设备上加载，占用多大内存？
+
+首先按照上面的知识计算 decode 出来的 Bitmap 有多大：
+
+```bash
+width: 276*(400/160) = 690
+height: 214*(400/160) = 535
+```
+
+由于 inpreferredConfig 默认为 `Bitmap.Config.ARGB_8888`，所以一个像素点占4个字节，即最终创建出来的 bitmap 大小为：
+
+```bash
+690*535*4 = 1476600
+```
+
+同样可以通过代码验证一致：
+
+```kotlin
+val bitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower)
+Log.d(TAG, "bitmap.width=${bitmap.width}")
+Log.d(TAG, "bitmap.height=${bitmap.height}")
+Log.d(TAG, "bitmap.rowBytes=${bitmap.rowBytes}")
+Log.d(TAG, "bitmap.byteCount=${bitmap.byteCount}")
+Log.d(TAG, "bitmap.allocationByteCount=${bitmap.allocationByteCount}")
+```
+
+```bash
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.width=690
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.height=535
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.rowBytes=2760
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.byteCount=1476600
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.allocationByteCount=1476600
+```
+
+### Bitmap.recycle()
+
+[Android Bitmap变迁与原理解析（4.x-8.x）](https://www.jianshu.com/p/d5714e8987f3)
+
+[Android | Bitmap的Java对象GC之后，对应的native内存会回收吗？](https://www.jianshu.com/p/6f042f9e47a8)
+
+2.3.3 版本之前，bitmap的像素数据储存在 native 里面，回收不可控，需要用户手动调用 `recycle()` 
+
+* Java 层的 Bitmap 对象是一个壳, 非常小, 因此有可能会出现 Native 堆快到了 3G, Java 堆才 10 MB, 10MB 是无法触发 Dalvik GC 的, 因此这个 java 对象的 finalize 并非那么容易调用, 因此可能会出现 Native 堆 OOM 的情况, 故需要我们手动 recycle
+
+3.0~7.1 版本之间，bitmap的像素数据储存在 Dalvik 碓中，可以通过 GC 自动回收，无须手动调用 `recycle()` 
+
+* 像素数据直接放置到 Java 堆, Java 堆就能直接统计到真正的内存数据, 能够根据内存使用情况准确触发 GC 回收数据，隐患便是 Java 堆内存空间比较小, 容器造成 Java 堆的 OOM
+
+- 4.4可以通过inInputShareable、inPurgeable让Bitmap的内存在native层分配（fresco、已废弃）
+
+8.0 开始，bitmap的像素数据又回到了 native 里面了，但是内存管理更优秀，不需要用户手动去回收了
+
+* `NativeAllocationRegistry`利用虚引用感知`Java`对象被回收的时机，来回收`native`内存
+
+### Bitmap缓存管理
+
+**LruCache**：LRU(Least Recently Used,最近最少使用)算法，采用 LinkedHashMap 内存缓存，accessOrder 指定为 true，遍历基于访问顺序 
+
+[Android缓存机制-LRU cache原理与用法](https://juejin.cn/post/6844903678474715143)
+
+**DisLruCache**：磁盘缓存的 LruCache
+
+### 加载巨图如何防止OOM
+
+BitmapRegionDecoder，从巨图中 decode 局部 bitmap，切片合并。
+
+[https://github.com/LuckyJayce/LargeImage](https://github.com/LuckyJayce/LargeImage)
 
 
 
