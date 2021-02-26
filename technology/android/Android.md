@@ -493,6 +493,28 @@ fun Canvas.drawTextByPoint(
 
 ## Drawable
 
+| XML标签           | Drawable                  | 备注   |
+| ----------------- | ------------------------- | ------ |
+| selector          | StateListDrawable         |        |
+| animated-selector | AnimatedStateListDrawable |        |
+| level-list        | LevelListDrawable         |        |
+| layer-list        | LayerDrawable             |        |
+| transition        | TransitionDrawable        |        |
+| ripple            | ColorDrawable             |        |
+| shape             | GradientDrawable          |        |
+| vector            | VectorDrawable            |        |
+| animated-vector   | AnimatedVectorDrawable    |        |
+| scale             | ScaleDrawable             |        |
+| clip              | ClipDrawable              |        |
+| rotate            | RotateDrawable            |        |
+| animated-rotate   | AnimatedRotateDrawable    |        |
+| animation-list    | AnimationDrawable         | 帧动画 |
+| inset             | InsetDrawable             |        |
+| bitmap            | BitmapDrawable            |        |
+| nine-patch        | NinePatchDrawable         |        |
+
+
+
 
 
 ## 动画
