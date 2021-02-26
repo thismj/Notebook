@@ -188,45 +188,6 @@ FragmentPagerAdapter更多的用于相对静态的、少量界面的ViewPager，
 
 
 
-## View
-
-
-
-
-
-###EditText
-android:imeOptions 属性
-
-
-###自定义View
-
-#### Paint
-
-[绘制文本drawText()](https://hencoder.com/ui-1-3/)
-
-```kotlin
-fun Canvas.drawTextByPoint(
-    text: String,
-    x: Float,
-    y: Float,
-    paint: Paint,
-    align: Paint.Align = Paint.Align.CENTER
-) {
-    val fontMetrics = paint.fontMetrics
-    val textWidth = paint.measureText(text)
-    //基于y使文本居中计算绘制的baseline
-    val baseLine = y - (fontMetrics.top + fontMetrics.bottom) / 2
-    val drawX = when (align) {
-        Paint.Align.LEFT -> x
-        Paint.Align.CENTER -> x - textWidth / 2
-        Paint.Align.RIGHT -> x - textWidth
-    }
-    drawText(text, drawX, baseLine, paint)
-}
-```
-
-
-
 ## Handler
 
 ### 基本原理
@@ -491,6 +452,174 @@ HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.p
 17.Handler的消息延时是如何实现的？
 18.什么是消息屏障？
 19.假设主线程new了Handler A和Handler B以及Handler C,现在有个子线程，在子线程中通过Handler C发送了一条消息，那么Handler A和Handler B能接收到吗？为什么？
+
+
+
+## View
+
+###EditText
+
+android:imeOptions 属性
+
+
+###自定义View
+
+#### Paint
+
+[绘制文本drawText()](https://hencoder.com/ui-1-3/)
+
+```kotlin
+fun Canvas.drawTextByPoint(
+    text: String,
+    x: Float,
+    y: Float,
+    paint: Paint,
+    align: Paint.Align = Paint.Align.CENTER
+) {
+    val fontMetrics = paint.fontMetrics
+    val textWidth = paint.measureText(text)
+    //基于y使文本居中计算绘制的baseline
+    val baseLine = y - (fontMetrics.top + fontMetrics.bottom) / 2
+    val drawX = when (align) {
+        Paint.Align.LEFT -> x
+        Paint.Align.CENTER -> x - textWidth / 2
+        Paint.Align.RIGHT -> x - textWidth
+    }
+    drawText(text, drawX, baseLine, paint)
+}
+```
+
+
+
+## Drawable
+
+
+
+## 动画
+
+### 帧动画
+
+XML中使用 `animation-list` 定义，对应于 Java 的类是 `AnimationDrawable`，动画的原理是根据 `animation-list ` 定义的每一帧的图片（drawable）以及持续时间（duration），通过 Choreographer 请求 Vsync 信号，然后触发 View 的重绘。
+
+`AnimationDrawable.start()`
+
+```java
+public void start() {
+   mAnimating = true;
+   if (!isRunning()) {
+       //从第0帧开始显示
+       setFrame(0, false, mAnimationState.getChildCount() > 1
+                    || !mAnimationState.mOneShot);
+   }
+}
+```
+
+`AnimationDrawable.setFrame()`
+
+```java
+private void setFrame(int frame, boolean unschedule, boolean animate) {
+        if (frame >= mAnimationState.getChildCount()) {
+            return;
+        }
+        mAnimating = animate;
+        mCurFrame = frame;
+        selectDrawable(frame);
+        if (unschedule || animate) {
+            unscheduleSelf(this);
+        }
+        if (animate) {
+            // Unscheduling may have clobbered these values; restore them
+            //记录当前帧序列
+            mCurFrame = frame;
+            mRunning = true;
+            scheduleSelf(this, SystemClock.uptimeMillis() + mAnimationState.mDurations[frame]);
+        }
+    }
+```
+
+`DrawableContainer.selectDrawable`
+
+```java
+public boolean selectDrawable(int index) {
+        ......
+        //触发View重绘
+        invalidateSelf();
+        return true;
+    }
+```
+
+`Drawable.invalidateSelf()`
+
+```java
+public void invalidateSelf() {
+        final Callback callback = getCallback();
+        if (callback != null) {
+            //此callbak即View对象，回调到View的invalidateDrawable()方法里面去，最终会触发View的invalidate()方法
+            callback.invalidateDrawable(this);
+        }
+    }
+```
+
+上一帧重绘之后，根据绘制帧设置的持续时间（duration），去计划请求下一次Vsync信号，`Drawable.scheduleSelf()`
+
+```java
+public void scheduleSelf(@NonNull Runnable what, long when) {
+        final Callback callback = getCallback();
+        if (callback != null) {
+            //此callbak即View对象，回调到View的scheduleDrawable()方法里面去
+            callback.scheduleDrawable(this, what, when);
+        }
+    }
+```
+
+`View.scheduleDrawable()`
+
+```java
+public void scheduleDrawable(@NonNull Drawable who, @NonNull Runnable what, long when) {
+        if (verifyDrawable(who) && what != null) {
+            //请求Vsync操作的delay时间
+            final long delay = when - SystemClock.uptimeMillis();
+            if (mAttachInfo != null) {
+                //通过Choreographer请求Vsync回调
+                mAttachInfo.mViewRootImpl.mChoreographer.postCallbackDelayed(
+                        Choreographer.CALLBACK_ANIMATION, what, who,
+                        Choreographer.subtractFrameDelay(delay));
+            } else {
+                // Postpone the runnable until we know
+                // on which thread it needs to run.
+                getRunQueue().postDelayed(what, delay);
+            }
+        }
+    }
+```
+
+Vsync信号回调回来，走到 `AnimationDrawable.run()`
+
+```java
+@Override
+    public void run() {
+        nextFrame(false);
+    }
+```
+
+`AnimationDrawable.nextFrame()`
+
+```java
+private void nextFrame(boolean unschedule) {
+        int nextFrame = mCurFrame + 1;
+        final int numFrames = mAnimationState.getChildCount();
+        final boolean isLastFrame = mAnimationState.mOneShot && nextFrame >= (numFrames - 1);
+
+        //如果XML里面设置oneshot为false，则循环播放动画
+        if (!mAnimationState.mOneShot && nextFrame >= numFrames) {
+            nextFrame = 0;
+        }
+        //继续显示下一帧，形成闭环
+        setFrame(nextFrame, unschedule, !isLastFrame);
+    }
+```
+
+
 
 ## 屏幕适配
 

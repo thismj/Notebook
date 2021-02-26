@@ -452,6 +452,14 @@ ViewRootImpl->>IWindowSession: addToDisplay(IWindow...)
 
 ```
 
+## Choreographer
+
+[Android的16ms和垂直同步以及三重缓存](https://cloud.tencent.com/developer/article/1176313)
+
+[Android-Choreographer原理](https://ljd1996.github.io/2020/09/07/Android-Choreographer%E5%8E%9F%E7%90%86/)
+
+
+
 ## ANR
 
 ### 触发原理

@@ -37,6 +37,17 @@ b2 += 128; //隐式向下转型，被编译成 b2 = (byte)(b2 + 128)
 
 [15.26.2. Compound Assignment Operators](https://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.26.2)
 
+float强转int会舍弃掉小数部分，如果要做到四舍五入应该先 `+0.5f`
+
+```java
+int a = (int) 10.5f;   //a = 10;
+
+float f = 10.5f;
+int a = (int) (f + 0.5f);   // a = 11;
+```
+
+
+
 ### 类
 
 #### 非静态内部类&匿名内部类持有外部引用
