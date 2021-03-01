@@ -399,7 +399,7 @@ Message next() {
 
 [Android只在UI主线程修改UI，是个谎言吗？ 为什么这段代码能完美运行](https://www.zhihu.com/question/24764972)
 
-`ActivityThread.handleResumeActivity` 之后，会通过 WindowManager 添加当前 Activity 的顶级 DecorView，此时会生成与之对应的 ViewRootImpl 实例，并通过 ViewRootImpl  来进行控制 View 树的测量布局与绘制。ViewRootImpl 在对 View进行操作前，会通过 `checkThread`方法来判断创建该 ViewRootImpl 实例的线程与操作该 ViewRootImpl 实例的线程是否一致，不一致则抛出 `CalledFromWrongThreadException` 异常。在 Activity 的 onCreate() 方法中，此时还没有创建 ViewRootImpl 实例，View也没有回调 `dispatchAttachedToWindow` 方法，所以它的 `mAttachInfo` `mParent` 变量都为空，此时 `invalidateInternal()` 方法中判断它们 null 时，就不会去调用 ViewRootImpl  实例的`invalidateChild()`方法，所以在 Activity 的 onCreate() 方法中开个即时线程去更新 UI 是不会报错的。
+`ActivityThread.handleResumeActivity` 之后，会通过 WindowManager 添加当前 Activity 的顶级 DecorView，此时会生成与之对应的 ViewRootImpl 实例，并通过 ViewRootImpl  来进行控制 View 树的测量布局与绘制。ViewRootImpl 在对 View进行操作前，会通过 `checkThread`方法来判断创建该 ViewRootImpl 实例的线程与操作该 ViewRootImpl 实例的线程是否一致，不一致则抛出 `CalledFromWrongThreadException` 异常。在 Activity 的 onCreate() 方法中，此时还没有创建 ViewRootImpl 实例，View也没有回调 `dispatchAttachedToWindow` 方法，所以它的 `mAttachInfo` `mParent` 变量都为空，此时 `invalidateInternal()` 方法中判断它们为 null 时，就不会去调用 ViewRootImpl  实例的`invalidateChild()`方法，所以在 Activity 的 onCreate() 方法中开个即时线程去更新 UI 是不会报错的。
 
 ```java
 void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
@@ -521,7 +521,7 @@ fun Canvas.drawTextByPoint(
 
 ### 帧动画
 
-XML中使用 `animation-list` 定义，对应于 Java 的类是 `AnimationDrawable`，动画的原理是根据 `animation-list ` 定义的每一帧的图片（drawable）以及持续时间（duration），通过 Choreographer 请求 Vsync 信号，然后触发 View 的重绘。
+在 `res/drawable` 中使用 XML 标签 `animation-list` 定义，对应于 Java 的类是 `AnimationDrawable`，帧动画的原理是根据 `animation-list ` 定义的每一帧的图片（drawable）以及持续时间（duration），通过 Choreographer 请求 Vsync 信号，然后触发 View 的重绘。
 
 `AnimationDrawable.start()`
 
@@ -642,6 +642,21 @@ private void nextFrame(boolean unschedule) {
 ```
 
 
+
+###补间动画
+
+在 `res/anim` 中使用 XML 标签 `translate`、`scale`、`rotate`、`alpha` 定义：
+
+| 标签      | 对应 Animation 的子类 | 作用               |
+| --------- | --------------------- | ------------------ |
+| translate | TranslateAnimation    | 平移 View 的位置   |
+| scale     | ScaleAnimation        | 放大缩小 View      |
+| rotate    | RotateAnimation       | 旋转 View          |
+| alpha     | AlphaAnimation        | 改变 View 的透明度 |
+
+[View 动画Animation 运行原理解析](https://www.cnblogs.com/dasusu/p/8287822.html)](https://www.cnblogs.com/dasusu/p/8287822.html)
+
+补间动画的原理是：通过调用 `View.startAnimation(Animation animation)` 方法，内部根据动画的时间以及设置的插值器(Interpolator)，计算出动画当前的Alpha、Matrix 等作用于 View 的 Paint、Canvas 上，并不断地调用 `invalid()` 进行重绘，从而实现对应的效果。
 
 ## 屏幕适配
 
@@ -918,7 +933,7 @@ Log.d(TAG, "bitmap.allocationByteCount=${bitmap.allocationByteCount}")
 
 8.0 开始，bitmap的像素数据又回到了 native 里面了，但是内存管理更优秀，不需要用户手动去回收了
 
-* `NativeAllocationRegistry`利用虚引用感知`Java`对象被回收的时机，来回收`native`内存
+* `NativeAllocationRegistry` 利用虚引用感知 `Java` 对象被回收的时机，来回收`native`内存
 
 ### Bitmap缓存管理
 
