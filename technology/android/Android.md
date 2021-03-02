@@ -658,6 +658,16 @@ private void nextFrame(boolean unschedule) {
 
 补间动画的原理是：通过调用 `View.startAnimation(Animation animation)` 方法，内部根据动画的时间以及设置的插值器(Interpolator)，计算出动画当前的Alpha、Matrix 等作用于 View 的 Paint、Canvas 上，并不断地调用 `invalid()` 进行重绘，从而实现对应的效果。
 
+### 属性动画
+
+插值器：根据时间流逝计算出的百分比
+
+估值器：根据插值器值计算出的属性值（复杂属性动画）
+
+[属性动画 ValueAnimator 运行原理全解析](https://www.jianshu.com/p/46f48f1b98a9)
+
+[View.animate()动画ViewPropertyAnimator原理解析](https://www.jianshu.com/p/b43cf452afc1)
+
 ## 屏幕适配
 
 ### 屏幕基础知识
