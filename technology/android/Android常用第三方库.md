@@ -379,9 +379,186 @@ public Response proceed(Request request, StreamAllocation streamAllocation, Http
   }
 ```
 
+上面分析了异步请求的流程，如果是同步请求，则直接调用 `RealCall.execute()`：
+
+```java
+public Response execute() throws IOException {
+    synchronized (this) {
+      if (executed) throw new IllegalStateException("Already Executed");
+      executed = true;
+    }
+    captureCallStackTrace();
+    timeout.enter();
+    eventListener.callStart(this);
+    try {
+      //分发同步请求任务
+      client.dispatcher().executed(this);
+      //跟异步任务一样，通过责任链递归调用获取返回结果
+      Response result = getResponseWithInterceptorChain();
+      if (result == null) throw new IOException("Canceled");
+      return result;
+    } catch (IOException e) {
+      e = timeoutExit(e);
+      eventListener.callFailed(this, e);
+      throw e;
+    } finally {
+      //移出同步执行队列
+      client.dispatcher().finished(this);
+    }
+  }
+```
+
+`Dispatcher.executed` ：
+
+```java
+  /** Used by {@code Call#execute} to signal it is in-flight. */
+  synchronized void executed(RealCall call) {
+    //直接添加进同步执行队列
+    runningSyncCalls.add(call);
+  }
+```
 
 
 
+总结流程图如下：
+
+<img src="https://images2018.cnblogs.com/blog/809143/201808/809143-20180816162138233-707076029.png" style="zoom:80%;" />
+
+
+
+### RetryAndFollowUpInterceptor
+
+除了我们自定义的普通拦截器之外，这个拦截器在链中先被执行，它的作用是重试&跟进请求（RetryAndFollowUp，不好用一个词翻译啊），包含TCP连接失败、请求超时等的重试、资源重定向，服务器认证的跟进请求等等。
+
+创建时机是在创建请求的时候 :
+
+```java
+  private RealCall(OkHttpClient client, Request originalRequest, boolean forWebSocket) {
+    this.client = client;
+    this.originalRequest = originalRequest;
+    this.forWebSocket = forWebSocket;
+    //创建RetryAndFollowUp拦截器
+    this.retryAndFollowUpInterceptor = new RetryAndFollowUpInterceptor(client, forWebSocket);
+    this.timeout = new AsyncTimeout() {
+      @Override protected void timedOut() {
+        cancel();
+      }
+    };
+    this.timeout.timeout(client.callTimeoutMillis(), MILLISECONDS);
+  }
+```
+
+`RetryAndFollowUpInterceptor.intercept(Chain chain)` :
+
+```java
+public Response intercept(Chain chain) throws IOException {
+    Request request = chain.request();
+    RealInterceptorChain realChain = (RealInterceptorChain) chain;
+    Call call = realChain.call();
+    EventListener eventListener = realChain.eventListener();
+
+    StreamAllocation streamAllocation = new StreamAllocation(client.connectionPool(),
+        createAddress(request.url()), call, eventListener, callStackTrace);
+    this.streamAllocation = streamAllocation;
+    //记录重试&跟进请求的次数
+    int followUpCount = 0;
+    //刚开始的时候肯定是null，当存在重试&跟进请求时会赋值为前一次请求的返回结果
+    Response priorResponse = null;
+    while (true) {
+      if (canceled) {
+        ////请求被外部取消
+        streamAllocation.release();
+        throw new IOException("Canceled");
+      }
+
+      Response response;
+      //释放连接标志位
+      boolean releaseConnection = true;
+      try {
+        //正常递归地调用责任链
+        response = realChain.proceed(request, streamAllocation, null, null);
+        releaseConnection = false;
+      } catch (RouteException e) {
+        //连接服务器出错，此时请求还没发送，判断是否要重试
+        if (!recover(e.getLastConnectException(), streamAllocation, false, request)) {
+          throw e.getFirstConnectException();
+        }
+        //如果在外部设置了retryOnConnectionFailure为true，并且发生的异常不是永久性的，则尝试去重新连接，不释放资源
+        releaseConnection = false;
+        continue;
+      } catch (IOException e) {
+        //跟服务器交互时出异常了，这种情况请求是可能已经发送出去了的
+        boolean requestSendStarted = !(e instanceof ConnectionShutdownException);
+        //同样的方法判断需不要重试
+        if (!recover(e, streamAllocation, requestSendStarted, request)) throw e;
+        releaseConnection = false;
+        continue;
+      } finally {
+        if (releaseConnection) {
+          streamAllocation.streamFailed(null);
+          streamAllocation.release();
+        }
+      }
+
+      //如果当前请求结果之前存在重试&跟进，则把上一次的返回结果附加在当前结果里面
+      if (priorResponse != null) {
+        response = response.newBuilder()
+            .priorResponse(priorResponse.newBuilder()
+                    .body(null)
+                    .build())
+            .build();
+      }
+
+      Request followUp;
+      try {
+        //查看是否要进行跟进请求，主要有以下几种情况
+        //1、http认证请求 401、407
+        //2、外部设置了followRedirects为true，资源重定向 301、302、303（具有Location返回头）307、308（仅仅当重定向为GET、HEAD请求）等
+        //3、外部设置了retryOnConnectionFailure为true，408错误码，服务器超时，还有一系列条件。。。
+        //4、如果之前的请求正常，而本次返回了503 服务器维护，并且携带了返回头 "Retry-After=0"
+        followUp = followUpRequest(response, streamAllocation.route());
+      } catch (IOException e) {
+        streamAllocation.release();
+        throw e;
+      }
+      //followUp为null，说明没有后续的跟进请求，直接返回Response
+      if (followUp == null) {
+        streamAllocation.release();
+        return response;
+      }
+
+      //followUp不为null，后续会执行跟进请求，关闭前一个返回结果的流资源
+      closeQuietly(response.body());
+
+      //重试&跟进请求次数超过了最大20次，就放弃了
+      if (++followUpCount > MAX_FOLLOW_UPS) {
+        streamAllocation.release();
+        throw new ProtocolException("Too many follow-up requests: " + followUpCount);
+      }
+
+      //Response标记了UnrepeatableRequestBody，则不允许跟进请求
+      if (followUp.body() instanceof UnrepeatableRequestBody) {
+        streamAllocation.release();
+        throw new HttpRetryException("Cannot retry streamed HTTP body", response.code());
+      }
+
+      if (!sameConnection(response, followUp.url())) {
+        streamAllocation.release();
+        //跟进的请求的主机是否与之前一致，如果不一致的话，不一致的话需要重新创建新的连接
+        streamAllocation = new StreamAllocation(client.connectionPool(),
+            createAddress(followUp.url()), call, eventListener, callStackTrace);
+        this.streamAllocation = streamAllocation;
+      } else if (streamAllocation.codec() != null) {
+        throw new IllegalStateException("Closing the body of " + response
+            + " didn't close its backing stream. Bad interceptor?");
+      }
+
+      //重置请求跟返回，开始下一次跟进请求
+      request = followUp;
+      priorResponse = response;
+    }
+  }
+```
 
 
 
