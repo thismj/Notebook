@@ -735,6 +735,63 @@ Physical density: 400
 2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.ydpi=320.0
 ```
 
+1dp是否在所有设备上的物理长度完全一致？不是，因为通过 dp 计算 px 是根据 `metrics.density` 来的，但是 `metrics.densityDpi` 并不是物理屏幕真实的 DPI，因为安卓的屏幕尺寸五花八门，所以系统将其划分到一个标准的DPI值[**hw-lcd.c**](https://android.googlesource.com/platform/external/qemu/+/emu-2.2-release/android/hw-lcd.c#18)：
+
+```c++
+#define  LCD_DENSITY_LDPI      120
+#define  LCD_DENSITY_MDPI      160
+#define  LCD_DENSITY_TVDPI     213
+#define  LCD_DENSITY_HDPI      240
+#define  LCD_DENSITY_260DPI    260
+#define  LCD_DENSITY_280DPI    280
+#define  LCD_DENSITY_300DPI    300
+#define  LCD_DENSITY_XHDPI     320
+#define  LCD_DENSITY_340DPI    340
+#define  LCD_DENSITY_360DPI    360
+#define  LCD_DENSITY_400DPI    400
+#define  LCD_DENSITY_420DPI    420
+#define  LCD_DENSITY_440DPI    440
+#define  LCD_DENSITY_XXHDPI    480
+#define  LCD_DENSITY_560DPI    560
+#define  LCD_DENSITY_XXXHDPI   640
+
+void hwLcd_setBootProperty(int density)
+{
+    char  temp[8];
+    /* Map density to one of our bucket values.
+       The TV density is a bit particular (and not actually a bucket
+       value) so we do only exact match on it.
+       电视不划分，直接用真实的物理屏幕密度
+    */
+    if (density != LCD_DENSITY_TVDPI) {
+        if (density < (LCD_DENSITY_LDPI + LCD_DENSITY_MDPI)/2)
+            density = LCD_DENSITY_LDPI;
+        else if (density < (LCD_DENSITY_MDPI + LCD_DENSITY_HDPI)/2)
+            density = LCD_DENSITY_MDPI;
+        else if (density < (LCD_DENSITY_HDPI + LCD_DENSITY_280DPI)/2)
+            density = LCD_DENSITY_HDPI;
+        else if (density < (LCD_DENSITY_280DPI + LCD_DENSITY_XHDPI)/2)
+            density = LCD_DENSITY_280DPI;
+        else if (density < (LCD_DENSITY_XHDPI + LCD_DENSITY_360DPI)/2)
+            density = LCD_DENSITY_XHDPI;
+        else if (density < (LCD_DENSITY_360DPI + LCD_DENSITY_400DPI)/2)
+            density = LCD_DENSITY_360DPI;
+        else if (density < (LCD_DENSITY_400DPI + LCD_DENSITY_420DPI) / 2)
+            density = LCD_DENSITY_400DPI;
+        else if (density < (LCD_DENSITY_420DPI + LCD_DENSITY_XXHDPI) / 2)
+            density = LCD_DENSITY_420DPI;
+        else if (density < (LCD_DENSITY_XXHDPI + LCD_DENSITY_560DPI)/2)
+            density = LCD_DENSITY_XXHDPI;
+        else if (density < (LCD_DENSITY_560DPI + LCD_DENSITY_XXXHDPI)/2)
+            density = LCD_DENSITY_560DPI;
+        else
+            density = LCD_DENSITY_XXXHDPI;
+    }
+    snprintf(temp, sizeof temp, "%d", density);
+    boot_property_add("qemu.sf.lcd_density", temp);
+}
+```
+
 
 
 | 密度限定符 | 说明                                                         |

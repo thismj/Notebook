@@ -2,6 +2,33 @@
 
 ## OkHttp
 
+### 常见问题
+
+**okhttp有哪些优势?**
+
+* 支持连接复用，减少握手成本
+* 域名对IP支持
+* 默认支持GZIP
+* 支持HTTP缓存，避免重复请求
+* API使用灵活，扩展性极强
+* 支持HTTP/2、SPDY
+
+**为什么response.body().string() 只能调用一次**
+
+body的内容通过流获取，读取之后流会被close掉
+
+**okhttp实现带进度上传下载**
+
+扩展RequestBody、ResponseBody，自定义拦截器进行替换，增加自己的回调接口
+
+**okhttp运用的设计模式**
+
+* 构造者模式（OkHttpClient,Request等各种对象的创建）
+* 工厂模式（EventListener.Factory）
+* 策略模式（CacheStrategy、HttpCodec(Http1Codec、HttpCodec)）
+* 责任链模式（拦截器的链式调用 getResponseWithInterceptorChain）
+* 享元模式（Dispatcher的线程池中，ConnectionPool连接池`）
+
 ### 主流程
 
 创建 `OkHttpClient`，通过 `newCall(Request request)` 方法传入`request` 请求参数新建 http 请求 `RealCall`。涉及到的设计模式有创建者模式（Builder）、外观模式。
