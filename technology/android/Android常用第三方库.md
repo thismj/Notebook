@@ -560,7 +560,134 @@ public Response intercept(Chain chain) throws IOException {
   }
 ```
 
+### BridgeInterceptor
+
+用来处理设置一些 Request 未指定，但是 OkHttp 默认的请求头，例如 `Host`、`User-Agent`、`Accept-Encoding` 默认 gzip 编码；处理 Cookie 的保存和恢复
+
+### CacheInterceptor
+
+具体的缓存策略依赖于 HTTP 本身的缓存机制，并且只会缓存 GET 请求；采用 DiskLruCache 来作为磁盘缓存。
+
+>1.通过Request尝试到Cache中拿缓存（里面非常多流程），当然前提是OkHttpClient中配置了缓存，默认是不支持的。
+ 2.根据response,time,request创建一个缓存策略，用于判断怎样使用缓存。
+ 3.如果缓存策略中设置禁止使用网络，并且缓存又为空，则构建一个Resposne直接返回，注意返回码=504
+ 4.缓存策略中设置不使用网络，但是又缓存，直接返回缓存
+ 5.接着走后续过滤器的流程，chain.proceed(networkRequest)
+ 6.当缓存存在的时候，如果网络返回的Resposne为304，则使用缓存的Resposne。
+ 7.构建网络请求的Resposne
+ 8.当在OKHttpClient中配置了缓存，则将这个Resposne缓存起来。
+ 9.缓存起来的步骤也是先缓存header，再缓存body。
+ 10.返回Resposne。
 
 
 
+### ConnectInterceptor
+
+用来和远端服务器建立连接，TCP、TLS的握手操作等
+
+`StreamAllocation`：协调请求、连接、流，负责为一次请求(`Call`) 寻找连接(`Connection`)并建立流(`HttpCodec`)，从而完成远程通信。
+
+`RouteSelector`：路由选择器，即对代理服务器、IP地址的选择
+
+`Route`：路由实例，包含选择的代理服务器和IP地址。
+
+`RealConnection`：连接(`Connection`)的实现类，对 Socket 的封装
+
+`ConnectionPool`：连接(`Connection`)池，Socket连接复用，对于HTTP1.x来说，host相同直接复用；默认最多存在5个空闲的连接，如果在5分钟没有使用的话则会被释放
+
+`HttpCodec`：负责 HTTP 请求的编码和返回的解码操作
+
+### CallServerInterceptor
+
+负责发送请求到服务端然后接受返回结果。
+
+```java
+@Override public Response intercept(Chain chain) throws IOException {
+    RealInterceptorChain realChain = (RealInterceptorChain) chain;
+    HttpCodec httpCodec = realChain.httpStream();
+    StreamAllocation streamAllocation = realChain.streamAllocation();
+    RealConnection connection = (RealConnection) realChain.connection();
+    Request request = realChain.request();
+
+    long sentRequestMillis = System.currentTimeMillis();
+
+    realChain.eventListener().requestHeadersStart(realChain.call());
+    //通过httpCodec写入请求头
+    httpCodec.writeRequestHeaders(request);
+    realChain.eventListener().requestHeadersEnd(realChain.call(), request);
+
+    Response.Builder responseBuilder = null;
+    if (HttpMethod.permitsRequestBody(request.method()) && request.body() != null) {
+      // If there's a "Expect: 100-continue" header on the request, wait for a "HTTP/1.1 100
+      // Continue" response before transmitting the request body. If we don't get that, return
+      // what we did get (such as a 4xx response) without ever transmitting the request body.
+      if ("100-continue".equalsIgnoreCase(request.header("Expect"))) {
+        //如果请求头包含 "Expect:100-continue" 则直接flush发送给服务端
+        httpCodec.flushRequest();
+        realChain.eventListener().responseHeadersStart(realChain.call());
+        //读取服务端的返回头，如果此处返回null，证明服务器返回了状态码100，客户端可继续发送请求
+        responseBuilder = httpCodec.readResponseHeaders(true);
+      }
+
+      if (responseBuilder == null) {
+        // Write the request body if the "Expect: 100-continue" expectation was met.
+        //继续发送请求
+        realChain.eventListener().requestBodyStart(realChain.call());
+        long contentLength = request.body().contentLength();
+        CountingSink requestBodyOut =
+            new CountingSink(httpCodec.createRequestBody(request, contentLength));
+        BufferedSink bufferedRequestBody = Okio.buffer(requestBodyOut);
+
+        //写入请求body
+        request.body().writeTo(bufferedRequestBody);
+        bufferedRequestBody.close();
+        realChain.eventListener()
+            .requestBodyEnd(realChain.call(), requestBodyOut.successfulCount);
+      } else if (!connection.isMultiplexed()) {
+        // If the "Expect: 100-continue" expectation wasn't met, prevent the HTTP/1 connection
+        // from being reused. Otherwise we're still obligated to transmit the request body to
+        // leave the connection in a consistent state.
+        //如果100 continue服务器未满足，禁止在这个连接上创建新流
+        streamAllocation.noNewStreams();
+      }
+    }
+
+    httpCodec.finishRequest();
+
+    if (responseBuilder == null) {
+      realChain.eventListener().responseHeadersStart(realChain.call());
+      //读取返回头，构建返回结果Response.Builder
+      responseBuilder = httpCodec.readResponseHeaders(false);
+    }
+
+    //把请求信息、握手信息、返回时间等写入responseBuilder
+    Response response = responseBuilder
+        .request(request)
+        .handshake(streamAllocation.connection().handshake())
+        .sentRequestAtMillis(sentRequestMillis)
+        .receivedResponseAtMillis(System.currentTimeMillis())
+        .build();
+
+    ......
+
+    realChain.eventListener()
+            .responseHeadersEnd(realChain.call(), response);
+
+    if (forWebSocket && code == 101) {
+      // Connection is upgrading, but we need to ensure interceptors see a non-null response body.
+      response = response.newBuilder()
+          .body(Util.EMPTY_RESPONSE)
+          .build();
+    } else {
+      //把返回体写入responseBuilder
+      response = response.newBuilder()
+          .body(httpCodec.openResponseBody(response))
+          .build();
+    }
+
+    ......
+    //最终返回到上一个拦截器，即 ConnectInterceptor
+    return response;
+  }
+```
 
