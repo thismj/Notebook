@@ -174,23 +174,63 @@ LMK每隔一段时间就会去检测当前空闲内存是否低于某个阈值(m
 
 ```bash
 ➜  ~ adb shell
-ag501:/ # cat /sys/module/lowmemorykiller/parameters/adj
+shamu:/ # cat /sys/module/lowmemorykiller/parameters/adj                                                                                                       
 0,100,200,300,900,906
-ag501:/ # cat /sys/module/lowmemorykiller/parameters/minfree (单位:4K)
-18432,23040,27648,32256,55296,80640
+shamu:/ # cat /sys/module/lowmemorykiller/parameters/minfree(单位：4K)
+18432,23040,27648,32256,36864,46080
 ```
 
-oom_adj一些常用值：
+查看进程的 OOM_ADJ 值（`cn.thismj.android.demo`按 Home 键进入后台）：
 
-| FOREGROUND_APP_ADJ   | 0    | 前台进程，正在活动的Activity或者使用startForeground的Service |
-| -------------------- | ---- | ------------------------------------------------------------ |
-| VISIBLE_APP_ADJ      | 1    | 可见进程，不可操作的Activity，但是可见                       |
-| SECONDARY_SERVER_ADJ | 2    | 拥有后台服务器的进程                                         |
-| HIDDEN_APP_MIN_ADJ   | 7    | Activity没有完全退出，直接采用 moveTaskToBack 到HOME的进程   |
-| CONTENT_PROVIDER_ADJ | 14   | 内容提供进程                                                 |
-| EMPTY_APP_ADJ        | 15   | 空程序，既不提供服务，也不提供内容                           |
-| CORE_SERVER_ADJ      | -12  | 系统进程                                                     |
-| SYSTEM_ADJ           | -16  | 系统核心服务（进程永远不会被杀掉）                           |
+```bash
+➜  ~ adb shell
+shamu:/ $ su
+shamu:/ # ps | grep demo
+u0_a120   13539 7196  1183600 65168 SyS_epoll_ b0d24514 S cn.thismj.android.demo
+u0_a114   15165 7196  1142444 60016 SyS_epoll_ b0d24514 S cn.yunzhisheng.prodemo
+shamu:/ # ls /proc/13539 | grep oom
+oom_adj
+oom_score
+oom_score_adj
+shamu:/ # cat proc/13539/oom_adj                                                                                                                               
+11
+shamu:/ # cat proc/13539/oom_score                                                                                                                             
+721
+shamu:/ # cat proc/13539/oom_score_adj                                                                                                                         
+700
+```
+
+系统关于 OOM_ADJ 的范围设定：
+
+```c++
+#define OOM_SCORE_ADJ_MIN (-1000)
+#define OOM_SCORE_ADJ_MAX 1000
+#define OOM_DISABLE (-17)
+#define OOM_ADJUST_MIN (-16)
+#define OOM_ADJUST_MAX 15
+#endif
+```
+
+`oom_score_adj`：LMK使用这个值来确定杀死哪些进程，范围 [-1000,1000]
+
+`oom_adj`：为了和旧版本的内核兼容，范围 [-17,15]，修改这个值的时候，内核会直接进行换算，将结果反映到`oom_score_adj`
+
+`oom_score_adj` 一些常用值：
+
+| FOREGROUND_APP_ADJ     | 0     | 前台进程                     |
+| ---------------------- | ----- | ---------------------------- |
+| VISIBLE_APP_ADJ        | 100   | 可见进程                     |
+| PERCEPTIBLE_APP_ADJ    | 200   | 不可见，但是用户可察觉       |
+| BACKUP_APP_ADJ         | 300   | 托管备份的进程               |
+| SERVICE_ADJ            | 500   | 具有后台服务的app进程        |
+| HOME_APP_ADJ           | 600   | 桌面进程                     |
+| PREVIOUS_APP_ADJ       | 700   | 上一个跟用户交互的进程       |
+| CACHED_APP_MIN_ADJ     | 900   | 缓存进程最小adj值            |
+| CACHED_APP_MAX_ADJ     | 906   | 缓存进程最大adj值            |
+| PERSISTENT_SERVICE_ADJ | -700  | 关联着系统或persistent进程   |
+| PERSISTENT_PROC_ADJ    | -800  | 系统persistent进程，比如电话 |
+| SYSTEM_ADJ             | -900  | system_server进程            |
+| NATIVE_ADJ             | -1000 | native进程，不受系统管理     |
 
 如何查看进程的 oom_adj 值：
 

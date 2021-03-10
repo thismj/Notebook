@@ -1018,6 +1018,94 @@ BitmapRegionDecoder，从巨图中 decode 局部 bitmap，切片合并。
 
 
 
+## 进程
+
+### 进程类型
+
+按照进程的重要性排序：
+
+**前台进程**，满足以下任一条件
+
+* 具有用户可以交互的Activity（回调了`Activity.onResume()`）
+* 正在回调执行广播（`BroadcastReceiver.onReceive()`）
+* 正在回回调执行服务的生命周期方法（`Service.onCreate()` `Service.onStart()` `Service.onDestroy()`
+
+**可见进程**，满足以下任一条件
+
+* Activity可见，但不在前台（回调了`Activity.onPause()`）
+* 具有前台服务（`Service.startForeground()`）
+* 系统正在使用其托管的服务实现用户知晓的特定功能，例如动态壁纸、输入法服务等
+
+**服务进程**
+
+通过 `startService()` 启动了一个后台服务（如果后台服务运行时间过长，会降级至缓存服务，避免超长时间运行的服务因内存泄露或其他问题占用大量内存）
+
+**缓存进程**
+
+目前不需要的进程，缓存是为了更高效地切换应用。通常包含回调了 `onStop() `方法的 `Activity` 实例，例如按下 Home 键
+
+### UID、PID
+
+在 Android 中 UID 代表着一个应用程序的唯一标识，APP应用的 UID 从（`Process.FIRST_APPLICATION_UID`）10000 开始，在安装的时候就确定了下来，可以通过以下方式查看：
+
+```bash
+ cat /data/system/packages.xml
+ ......
+ <package name="cn.thismj.android.demo" codePath="/data/app/cn.thismj.android.demo-2" nativeLibraryPath="/data/app/cn.thismj.android.demo-2/lib" primaryCpuAbi="armeabi-v7a" publicFlags="675856198" privateFlags="0" ft="1755936e050" it="175593663a4" ut="1755936f317" version="1" userId="10120">
+        <sigs count="1">
+            <cert index="2" />
+        </sigs>
+        <perms>
+            <item name="com.google.android.c2dm.permission.RECEIVE" granted="true" flags="0" />
+            <item name="android.permission.RECEIVE_BOOT_COMPLETED" granted="true" flags="0" />
+            <item name="android.permission.INTERNET" granted="true" flags="0" />
+            <item name="android.permission.ACCESS_NETWORK_STATE" granted="true" flags="0" />
+            <item name="android.permission.WAKE_LOCK" granted="true" flags="0" />
+        </perms>
+        <proper-signing-keyset identifier="50" />
+ </package>
+ ......
+```
+
+如上图，`cn.thismj.android.demo` 的 UID 为 10120。
+
+PID 代表的是进程的唯一标识，可以通过 ps 命令查询相关信息：
+
+```bash
+ps
+USER      PID   PPID  VSIZE  RSS   WCHAN            PC  NAME
+......
+root      7196  1     1562732 60484 poll_sched b0d24700 S zygote
+......
+u0_a120   13539 7196  1149988 58764 SyS_epoll_ b0d24514 S cn.thismj.android.demo
+......
+```
+
+USER：u{uid / AID_USER(100000)}_a{uid % AID_USER(100000)-AID_APP(10000)} = u0_a120
+
+PID：进程ID
+
+PPID：父进程ID，所有 APP 进程 fork 自 zygote 进程，所以 13539 进程的父进程是 7196
+
+### 进程退出
+
+`System.exit(status)` 内部调用了 `Runtime.getRuntime().exit(status)`，status值不是 0 时代表非正常退出
+
+`android.os.Process.killProcess(android.os.Process.myPid())`
+
+`AMS.killBackgroundProcesses(packagenamw,userId)`
+
+`AMS.forceStopPackage(packagenamw,userId)`
+
+### 进程保活
+
+* 监听全局静态广播，比如开机广播、解锁屏广播、网络状态广播等，来启动应用的后台服务（高版本失效）
+* 提高进程的oom_adj值，例如 `startForeground()`启动前台Service（只能延缓进程的死亡）
+* JobScheduler（不需要稳定可靠性、精确时间的场景）
+* fork native进程拉活（5.0以uid杀进程组，失效）
+* 1像素Activity、后台无声音乐？？？？
+* 加入手机厂商白名单&引导用户把app加入系统白名单
+
 ### 易出错的地方
 
 LayoutInflater inflate 时如果 parent 传了 ull，则根布局设置的 layout params 无效，所以在布局里面设置了 layout_width 也无济于事了。
