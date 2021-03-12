@@ -210,6 +210,39 @@ Binder IPC 方式基于内存映射（mmap）来实现，只需要拷贝一次�
 
 ![](https://markdown-1258186581.cos.ap-shanghai.myqcloud.com/20190618235518.png)
 
+## 序列化
+
+### Serializable
+
+Java提供的序列化接口，实现了该接口的类对象能够通过 `ObjectOutputStream.writeObject()`和`ObjectInputStream.readObject()` 基于I/O持久化储存
+
+1. `serialVersionUID`：作为可序列化类的版本区分，如果反序列化时当前类版本与序列化时储存的版本不一致，则会抛出 `InvalidClassException` 异常；如果没有显示指定该值，则运行时会根据 `computeDefaultSUID()` 自动计算，所以为了防止类修改之后反序列化失败，一般都需要显示指定该值为常量。
+2. 静态变量属于类变量，对象进行序列化时会忽略
+3. 用 transient 修饰不想被序列化的字段
+4. 类增加私有的 `writeObject()` 和 `readObject()` 方法可以自定义序列化与反序列化过程，`ObjectOutputStream` 会通过反射来查看序列化的对象对应的类是否有 `writeObject()` 方法，如果有的话就不走默认的序列化实现了。
+5. `Externalizable` 接口继承了 `Serializable`，实现该接口的两个方法 `writeExternal` 和 `readExternal` 也能完全自定义序列化与反序列化过程，就不需要上述的反射操作了
+
+### Parcelable
+
+Android提供的序列化接口，基于内存，通过 `Parcel` 来传输，在写端进行序列化，读端进行反序列化。
+
+1. 实现 `Parcelable` ：实现 `writeToParcel()` 方法，写入序列化数据；创建类型为 `Parcelable.Creator` 的静态字段 `CREATOR`，通过它的 `createFromParcel` 进行反序列化
+2. `describeContents()` 用来描述该 `Parcelable` 需要传输的特殊对象，一般返回 0 代表都是普通数据，返回`CONTENTS_FILE_DESCRIPTOR`(1) 代表需要包含文件描述符
+3.  `Parcel`也可以通过 `writeSerializable()` 方法传输 `Serializable` 对象，过程是先把对象通过 `ObjectOutputStream` 序列化到一个 `ByteArrayOutputStream`流，然后再从 byte 数组流中读取数据，最后通过 `Parcel.writeByteArray()` 进行传输。该操作性能开销较大
+
+### 优缺点
+
+* `Serializable` 基于 I/O，并且内部过程使用了反射，创建了很多临时对象，所以效率低，开销大；但是实现方便，并且可以做持久化储存
+* `Parcelable` 基于内存，读写速度快，但是实现相对而言较麻烦，并且不能做持久化储存，适合被用作跨进程数据传输
+
+
+
+
+
+
+
+
+
 ## 参考资料
 
 [为什么 Android 要采用 Binder 作为 IPC 机制？](https://www.zhihu.com/question/39440766)
