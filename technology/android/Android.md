@@ -1016,6 +1016,12 @@ BitmapRegionDecoder，从巨图中 decode 局部 bitmap，切片合并。
 
 [https://github.com/LuckyJayce/LargeImage](https://github.com/LuckyJayce/LargeImage)
 
+### drawable跟mipmap资源的区别
+
+[[drawable和mipmap 目录下图片的区别](https://my.oschina.net/hejunbinlan/blog/1852697)](https://my.oschina.net/hejunbinlan/blog/1852697)
+
+放在 mipmap 资源文件夹下 decode 的 Bitmap 会默认设置 `setHasMipmap` 为 `true`，即对该 Bitmap 的渲染支持 mipmap（纹理映射）技术，会提前按缩小层级（按照2的倍数进行缩放，直到图像1x1的大小）生成图片预先存储在内存中，提高图片渲染的速度和质量（内存使用增加）；Google 建议只是把 launcher icon 放置在 mipmap 文件夹中，这样可以让我们程序的 launcher 图标自动拥有跨设备密度展示的能力，比如说一台屏幕密度是 xxhdpi 的设备可以自动加载 mipmap-xxxhdpi 下的 icon 来作为应用程序的 launcher 图标，这样图标看上去就会更加细腻。
+
 
 
 ## 进程
