@@ -25,7 +25,7 @@ body的内容通过流获取，读取之后流会被close掉
 
 * 构造者模式（OkHttpClient,Request等各种对象的创建）
 * 工厂模式（EventListener.Factory）
-* 策略模式（CacheStrategy、HttpCodec(Http1Codec、HttpCodec)）
+* 策略模式（CacheStrategy、HttpCodec(Http1Codec、Http2Codec)）
 * 责任链模式（拦截器的链式调用 getResponseWithInterceptorChain）
 * 享元模式（Dispatcher的线程池中，ConnectionPool连接池`）
 

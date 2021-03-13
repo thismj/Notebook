@@ -26,6 +26,8 @@ onPostCreate()/onPostResume(): onPostCreate() 在 onStart() 之后，onPostResum
 
 [Android onSaveInstanceState()和onRestoreInstanceState()调用时机](https://blog.csdn.net/fenggering/article/details/53907654)
 
+onStateNotSaved()：通常是当 Activity 可能被回收（例如按home键返回桌面等）而调用了 `onSaveInstanceState()` 之后又重新恢复之前 (`onResume()`) 回调
+
 [Android 横竖屏切换](https://www.jianshu.com/p/dbc7e81aead2)：从Android 3.2开始，横竖屏切换时，screenSize也会发生变化，所以需要配置 "android:configChanges="orientation|screenSize"，Activity才不会重启，只会回调 onConfigurationChanged() 方法
 
 监听 Home 按键：监听 "android.intent.action.CLOSE_SYSTEM_DIALOGS" 广播，获取 "reason" 字段携带的值，判断是 多任务案按键 还是 home 按键；
@@ -1020,7 +1022,7 @@ BitmapRegionDecoder，从巨图中 decode 局部 bitmap，切片合并。
 
 [[drawable和mipmap 目录下图片的区别](https://my.oschina.net/hejunbinlan/blog/1852697)](https://my.oschina.net/hejunbinlan/blog/1852697)
 
-放在 mipmap 资源文件夹下 decode 的 Bitmap 会默认设置 `setHasMipmap` 为 `true`，即对该 Bitmap 的渲染支持 mipmap（纹理映射）技术，会提前按缩小层级（按照2的倍数进行缩放，直到图像1x1的大小）生成图片预先存储在内存中，提高图片渲染的速度和质量（内存使用增加）；Google 建议只是把 launcher icon 放置在 mipmap 文件夹中，这样可以让我们程序的 launcher 图标自动拥有跨设备密度展示的能力，比如说一台屏幕密度是 xxhdpi 的设备可以自动加载 mipmap-xxxhdpi 下的 icon 来作为应用程序的 launcher 图标，这样图标看上去就会更加细腻。
+放在 mipmap 资源文件夹下 decode 的 Bitmap 会默认设置 `setHasMipmap` 为 `true`，即对该 Bitmap 的渲染支持 mipmap（纹理映射）技术，会提前按缩小层级（按照2的倍数进行缩放，直到图像1x1的大小）生成一系列图片预先存储在内存中，提高图片渲染的速度和质量（内存使用增加）；Google 建议只是把 launcher icon 放置在 mipmap 文件夹中，这样可以让我们程序的 launcher 图标自动拥有跨设备密度展示的能力，比如说一台屏幕密度是 xxhdpi 的设备可以自动加载 mipmap-xxxhdpi 下的 icon 来作为应用程序的 launcher 图标，这样图标看上去就会更加细腻。
 
 
 
