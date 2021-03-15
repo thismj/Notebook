@@ -161,7 +161,12 @@ AppCompat 的 View 获取到的是 TintContextWrapper（getResource() 具有对�
 
 
 
+## AndroidManifest.xml
+
+[应用清单概览](https://developer.android.com/guide/topics/manifest/manifest-intro)
+
 ## Fragment
+
 ### 生命周期
 ![](https://developer.android.com/images/fragment_lifecycle.png)
 
