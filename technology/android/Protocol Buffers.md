@@ -8,7 +8,7 @@ Google提供的一种跨语言、跨平台，具有良好兼容性且性能优�
 
 
 
-### .proto
+### .proto文件
 
 使用 protobuf 首先需要定义 .proto 文件：
 
@@ -50,6 +50,10 @@ import 其他的 .proto 文件
 import public "new.proto"; //指定 public 则 import 可以传递
 import "other.proto"; 
 ```
+
+### 生成Java文件
+
+foo_bar.proto -> FooBar.java，如果 .proto 文件有一个名为 FooBar 的 message，则会生成  FooBarOuterClass.java
 
 
 
