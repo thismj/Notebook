@@ -26,6 +26,8 @@ onPostCreate()/onPostResume(): onPostCreate() 在 onStart() 之后，onPostResum
 
 [Android onSaveInstanceState()和onRestoreInstanceState()调用时机](https://blog.csdn.net/fenggering/article/details/53907654)
 
+onStateNotSaved()：通常是当 Activity 可能被回收（例如按home键返回桌面等）而调用了 `onSaveInstanceState()` 之后又重新恢复之前 (`onResume()`) 回调
+
 [Android 横竖屏切换](https://www.jianshu.com/p/dbc7e81aead2)：从Android 3.2开始，横竖屏切换时，screenSize也会发生变化，所以需要配置 "android:configChanges="orientation|screenSize"，Activity才不会重启，只会回调 onConfigurationChanged() 方法
 
 监听 Home 按键：监听 "android.intent.action.CLOSE_SYSTEM_DIALOGS" 广播，获取 "reason" 字段携带的值，判断是 多任务案按键 还是 home 按键；
@@ -159,7 +161,12 @@ AppCompat 的 View 获取到的是 TintContextWrapper（getResource() 具有对�
 
 
 
+## AndroidManifest.xml
+
+[应用清单概览](https://developer.android.com/guide/topics/manifest/manifest-intro)
+
 ## Fragment
+
 ### 生命周期
 ![](https://developer.android.com/images/fragment_lifecycle.png)
 
@@ -185,45 +192,6 @@ FragmentTransaction：定义了对Fragment的事务操作，add、remove、hide�
 AndroidX：setUserVisibleHint被标记为过时了，Viewpager+FragmentPagerAdapter 的形式可以使用 FragmentTransaction 的 setMaxLifecycle 来实现懒加载，构造 FragmentPagerAdapter 的时候传 behavior 为 BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT，则内部会通过 setMaxLifecycle 来自动处理，确保只有显示的 Fragment 才回调 onResume 方法
 
 FragmentPagerAdapter更多的用于相对静态的、少量界面的ViewPager，划过的fragment会保存在内存中，如果加载的fragment较多会占用大量的内存，处于当前显示的 Fragment 前后 limit （通过 setOffscreenPageLimit() 设置）个以外的 Fragment 只会调用 onDestroyView，并不会onDestroy、onDetach。而FragmentStatePagerAdapter适用于数据动态性较大、页面比较多的情况，它并不会保存所有的fragment，只会保存当前显示的Fragment以及其前后 limit 个，其他会被销毁掉onDestroy、onDetach。
-
-
-
-## View
-
-
-
-
-
-###EditText
-android:imeOptions 属性
-
-
-###自定义View
-
-#### Paint
-
-[绘制文本drawText()](https://hencoder.com/ui-1-3/)
-
-```kotlin
-fun Canvas.drawTextByPoint(
-    text: String,
-    x: Float,
-    y: Float,
-    paint: Paint,
-    align: Paint.Align = Paint.Align.CENTER
-) {
-    val fontMetrics = paint.fontMetrics
-    val textWidth = paint.measureText(text)
-    //基于y使文本居中计算绘制的baseline
-    val baseLine = y - (fontMetrics.top + fontMetrics.bottom) / 2
-    val drawX = when (align) {
-        Paint.Align.LEFT -> x
-        Paint.Align.CENTER -> x - textWidth / 2
-        Paint.Align.RIGHT -> x - textWidth
-    }
-    drawText(text, drawX, baseLine, paint)
-}
-```
 
 
 
@@ -359,7 +327,7 @@ postSyncBarrier、removeSyncBarrier、setAsynchronous
 
 nativePollOnce、nativeWake
 
-当 MessageQueue 中没有可用的消息时，会通过 nativePollOnce 使线程进入阻塞状态，释放 CPU 资源，nativePollOnce 底层是通过 linux pipe/epoll 机制实现的，对某个文件描述符调用 epoll_wait，线程就会阻塞在管道的读端；当有新消息或者其他需要唤醒情况时，会通过 nativeWake 唤醒当前线程，nativeWake 底层通过往管道写端写入一个字节数据，从而唤醒线程从管道读端返回。nativePollOnce 大致等同于 Object.wait(), nativeWake 等同于 Object.notify(),只不过它们的实现完全不同: nativePollOnce使用 epoll, 而 Object.wait 使用 futex Linux 调用.
+当 MessageQueue 中没有可用的消息时，会通过 nativePollOnce 使线程进入阻塞状态，释放 CPU 资源，nativePollOnce 底层是通过 linux pipe（？？？eventfd？？Android M）/epoll 机制实现的，对某个文件描述符调用 epoll_wait，线程就会阻塞在管道的读端；当有新消息或者其他需要唤醒情况时，会通过 nativeWake 唤醒当前线程，nativeWake 底层通过往管道写端写入一个字节数据，从而唤醒线程从管道读端返回。nativePollOnce 大致等同于 Object.wait(), nativeWake 等同于 Object.notify(),只不过它们的实现完全不同: nativePollOnce使用 epoll, 而 Object.wait 使用 futex Linux 调用.
 
 IdelHandler应用
 
@@ -438,7 +406,7 @@ Message next() {
 
 [Android只在UI主线程修改UI，是个谎言吗？ 为什么这段代码能完美运行](https://www.zhihu.com/question/24764972)
 
-`ActivityThread.handleResumeActivity` 之后，会通过 WindowManager 添加当前 Activity 的顶级 DecorView，此时会生成与之对应的 ViewRootImpl 实例，并通过 ViewRootImpl  来进行控制 View 树的测量布局与绘制。ViewRootImpl 在对 View进行操作前，会通过 `checkThread`方法来判断创建该 ViewRootImpl 实例的线程与操作该 ViewRootImpl 实例的线程是否一致，不一致则抛出 `CalledFromWrongThreadException` 异常。在 Activity 的 onCreate() 方法中，此时还没有创建 ViewRootImpl 实例，View也没有回调 `dispatchAttachedToWindow` 方法，所以它的 `mAttachInfo` `mParent` 变量都为空，此时 `invalidateInternal()` 方法中判断它们 null 时，就不会去调用 ViewRootImpl  实例的`invalidateChild()`方法，所以在 Activity 的 onCreate() 方法中开个即时线程去更新 UI 是不会报错的。
+`ActivityThread.handleResumeActivity` 之后，会通过 WindowManager 添加当前 Activity 的顶级 DecorView，此时会生成与之对应的 ViewRootImpl 实例，并通过 ViewRootImpl  来进行控制 View 树的测量布局与绘制。ViewRootImpl 在对 View进行操作前，会通过 `checkThread`方法来判断创建该 ViewRootImpl 实例的线程与操作该 ViewRootImpl 实例的线程是否一致，不一致则抛出 `CalledFromWrongThreadException` 异常。在 Activity 的 onCreate() 方法中，此时还没有创建 ViewRootImpl 实例，View也没有回调 `dispatchAttachedToWindow` 方法，所以它的 `mAttachInfo` `mParent` 变量都为空，此时 `invalidateInternal()` 方法中判断它们为 null 时，就不会去调用 ViewRootImpl  实例的`invalidateChild()`方法，所以在 Activity 的 onCreate() 方法中开个即时线程去更新 UI 是不会报错的。
 
 ```java
 void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
@@ -470,6 +438,686 @@ void invalidateInternal(int l, int t, int r, int b, boolean invalidateCache,
 HandlerThread
 
 HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.prepare()`、`Looper.loop()`
+
+### 问题
+1.子线程一定不能更新UI吗？(校招&实习)
+2.给我说说Handler的原理(校招&实习)
+3.Handler导致的内存泄露你是如何解决的？
+4.如何使用Handler让子线程和子线程通信？
+5.你能给我说说Handler的设计原理？
+6.HandlerThread是什么 & 原理 & 使用场景？
+7.IdleHandler是什么？
+8.一个线程能否创建多个Handler,Handler和Looper之间的对应关系？
+9.为什么Android系统不建议子线程访问UI？
+10.Looper死循环为什么不会导致应用卡死？
+11.使用Handler的postDealy后消息队列有什么变化？
+12.可以在子线程直接new一个Handler出来吗？
+13.Message对象创建的方式有哪些 & 区别？
+14.ANR和Handler存在什么联系吗？
+15.子线程的Looper和主线程的Looper有什么区别？
+16.说说Handler为什么不能进行跨进程通信？[为什么Android的Handler采用管道而不使用Binder？](https://www.zhihu.com/question/44329366)
+17.Handler的消息延时是如何实现的？
+18.什么是消息屏障？
+19.假设主线程new了Handler A和Handler B以及Handler C,现在有个子线程，在子线程中通过Handler C发送了一条消息，那么Handler A和Handler B能接收到吗？为什么？
+
+
+
+## View
+
+###EditText
+
+android:imeOptions 属性
+
+
+###自定义View
+
+#### Paint
+
+[绘制文本drawText()](https://hencoder.com/ui-1-3/)
+
+```kotlin
+fun Canvas.drawTextByPoint(
+    text: String,
+    x: Float,
+    y: Float,
+    paint: Paint,
+    align: Paint.Align = Paint.Align.CENTER
+) {
+    val fontMetrics = paint.fontMetrics
+    val textWidth = paint.measureText(text)
+    //基于y使文本居中计算绘制的baseline
+    val baseLine = y - (fontMetrics.top + fontMetrics.bottom) / 2
+    val drawX = when (align) {
+        Paint.Align.LEFT -> x
+        Paint.Align.CENTER -> x - textWidth / 2
+        Paint.Align.RIGHT -> x - textWidth
+    }
+    drawText(text, drawX, baseLine, paint)
+}
+```
+
+
+
+## Drawable
+
+| XML标签           | Drawable                  | 备注   |
+| ----------------- | ------------------------- | ------ |
+| selector          | StateListDrawable         |        |
+| animated-selector | AnimatedStateListDrawable |        |
+| level-list        | LevelListDrawable         |        |
+| layer-list        | LayerDrawable             |        |
+| transition        | TransitionDrawable        |        |
+| ripple            | ColorDrawable             |        |
+| shape             | GradientDrawable          |        |
+| vector            | VectorDrawable            |        |
+| animated-vector   | AnimatedVectorDrawable    |        |
+| scale             | ScaleDrawable             |        |
+| clip              | ClipDrawable              |        |
+| rotate            | RotateDrawable            |        |
+| animated-rotate   | AnimatedRotateDrawable    |        |
+| animation-list    | AnimationDrawable         | 帧动画 |
+| inset             | InsetDrawable             |        |
+| bitmap            | BitmapDrawable            |        |
+| nine-patch        | NinePatchDrawable         |        |
+
+
+
+
+
+## 动画
+
+### 帧动画
+
+在 `res/drawable` 中使用 XML 标签 `animation-list` 定义，对应于 Java 的类是 `AnimationDrawable`，帧动画的原理是根据 `animation-list ` 定义的每一帧的图片（drawable）以及持续时间（duration），通过 Choreographer 请求 Vsync 信号，然后触发 View 的重绘。
+
+`AnimationDrawable.start()`
+
+```java
+public void start() {
+   mAnimating = true;
+   if (!isRunning()) {
+       //从第0帧开始显示
+       setFrame(0, false, mAnimationState.getChildCount() > 1
+                    || !mAnimationState.mOneShot);
+   }
+}
+```
+
+`AnimationDrawable.setFrame()`
+
+```java
+private void setFrame(int frame, boolean unschedule, boolean animate) {
+        if (frame >= mAnimationState.getChildCount()) {
+            return;
+        }
+        mAnimating = animate;
+        mCurFrame = frame;
+        selectDrawable(frame);
+        if (unschedule || animate) {
+            unscheduleSelf(this);
+        }
+        if (animate) {
+            // Unscheduling may have clobbered these values; restore them
+            //记录当前帧序列
+            mCurFrame = frame;
+            mRunning = true;
+            scheduleSelf(this, SystemClock.uptimeMillis() + mAnimationState.mDurations[frame]);
+        }
+    }
+```
+
+`DrawableContainer.selectDrawable`
+
+```java
+public boolean selectDrawable(int index) {
+        ......
+        //触发View重绘
+        invalidateSelf();
+        return true;
+    }
+```
+
+`Drawable.invalidateSelf()`
+
+```java
+public void invalidateSelf() {
+        final Callback callback = getCallback();
+        if (callback != null) {
+            //此callbak即View对象，回调到View的invalidateDrawable()方法里面去，最终会触发View的invalidate()方法
+            callback.invalidateDrawable(this);
+        }
+    }
+```
+
+上一帧重绘之后，根据绘制帧设置的持续时间（duration），去计划请求下一次Vsync信号，`Drawable.scheduleSelf()`
+
+```java
+public void scheduleSelf(@NonNull Runnable what, long when) {
+        final Callback callback = getCallback();
+        if (callback != null) {
+            //此callbak即View对象，回调到View的scheduleDrawable()方法里面去
+            callback.scheduleDrawable(this, what, when);
+        }
+    }
+```
+
+`View.scheduleDrawable()`
+
+```java
+public void scheduleDrawable(@NonNull Drawable who, @NonNull Runnable what, long when) {
+        if (verifyDrawable(who) && what != null) {
+            //请求Vsync操作的delay时间
+            final long delay = when - SystemClock.uptimeMillis();
+            if (mAttachInfo != null) {
+                //通过Choreographer请求Vsync回调
+                mAttachInfo.mViewRootImpl.mChoreographer.postCallbackDelayed(
+                        Choreographer.CALLBACK_ANIMATION, what, who,
+                        Choreographer.subtractFrameDelay(delay));
+            } else {
+                // Postpone the runnable until we know
+                // on which thread it needs to run.
+                getRunQueue().postDelayed(what, delay);
+            }
+        }
+    }
+```
+
+Vsync信号回调回来，走到 `AnimationDrawable.run()`
+
+```java
+@Override
+    public void run() {
+        nextFrame(false);
+    }
+```
+
+`AnimationDrawable.nextFrame()`
+
+```java
+private void nextFrame(boolean unschedule) {
+        int nextFrame = mCurFrame + 1;
+        final int numFrames = mAnimationState.getChildCount();
+        final boolean isLastFrame = mAnimationState.mOneShot && nextFrame >= (numFrames - 1);
+
+        //如果XML里面设置oneshot为false，则循环播放动画
+        if (!mAnimationState.mOneShot && nextFrame >= numFrames) {
+            nextFrame = 0;
+        }
+        //继续显示下一帧，形成闭环
+        setFrame(nextFrame, unschedule, !isLastFrame);
+    }
+```
+
+
+
+###补间动画
+
+在 `res/anim` 中使用 XML 标签 `translate`、`scale`、`rotate`、`alpha` 定义：
+
+| 标签      | 对应 Animation 的子类 | 作用               |
+| --------- | --------------------- | ------------------ |
+| translate | TranslateAnimation    | 平移 View 的位置   |
+| scale     | ScaleAnimation        | 放大缩小 View      |
+| rotate    | RotateAnimation       | 旋转 View          |
+| alpha     | AlphaAnimation        | 改变 View 的透明度 |
+
+[View 动画Animation 运行原理解析](https://www.cnblogs.com/dasusu/p/8287822.html)](https://www.cnblogs.com/dasusu/p/8287822.html)
+
+补间动画的原理是：通过调用 `View.startAnimation(Animation animation)` 方法，内部根据动画的时间以及设置的插值器(Interpolator)，计算出动画当前的Alpha、Matrix 等作用于 View 的 Paint、Canvas 上，并不断地调用 `invalid()` 进行重绘，从而实现对应的效果。
+
+### 属性动画
+
+插值器：根据时间流逝计算出的百分比
+
+估值器：根据插值器值计算出的属性值（复杂属性动画）
+
+[属性动画 ValueAnimator 运行原理全解析](https://www.jianshu.com/p/46f48f1b98a9)
+
+[View.animate()动画ViewPropertyAnimator原理解析](https://www.jianshu.com/p/b43cf452afc1)
+
+## 屏幕适配
+
+### 屏幕基础知识
+
+**屏幕尺寸**：指手机屏幕对角线的长度，单位为英寸：inch，1inch = 2.54cm
+
+**像素点**：手机屏幕的最小构成单元（Pixel）
+
+**分辨率**：手机屏幕（横屏）宽度像素点数x高度像素点数，例如 1280x720（720P）1920x1080（1080P），其中720、1080代表纵向（高度）有多少行像素，P代表逐行扫描，2560x1440（2K）、3840x2160（4K），代表横向（宽度）大于 2000、4000 列像素；720i、1080i，i代表隔行扫描。[1080p」和「2k、4k」的关系与差别在哪里](https://www.zhihu.com/question/24205632)
+
+**像素密度**：对于 Android 来说，即 PPI（Pixels Per Inch，每 inch 占的像素点数）或者 DPI（Dots Per Inch，这个实际上是用于打印机的，代表每 inch 墨点数）。例如小米，屏幕分辨率为3200x1440，尺寸为6.81 inch，则其像素密度 PPI（DPI） 为：
+$$
+\sqrt(3200^2+1440^2)\div6.81 = 515
+$$
+
+**PX**：即 Pixel，像素单位，屏幕分辨率使用的单位也就是 PX
+
+**PT**：标准的长度单位，1pt＝1/72 inch
+
+**DP**：即 DIP，Density-independent Pixels，密度无关像素单位。规定分辨率 320×480，尺寸 3.6 inch 的屏幕像素密度（160dpi）定义为标准像素密度，此时 1DP = 1PX，所以 DP 跟 PX 的换算关系为：
+$$
+PX = DP*\frac{DPI}{160}
+$$
+
+**SP**：scaled pixels，跟 DP 类似，但是会根据系统设置的字体大小偏好进行缩放
+
+
+
+adb查看屏幕参数信息：
+
+```bash
+➜  ~ adb shell dumpsys window displays | head -n 3
+WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
+  Display: mDisplayId=0
+    init=1080x1920 400dpi cur=1920x1080 app=1920x1080 rng=1080x1020-1920x1860
+    
+➜  ~ adb shell wm size
+Physical size: 1080x1920
+
+➜  ~ adb shell wm density                            
+Physical density: 400
+```
+
+代码中获取屏幕信息：
+
+```kotlin
+  val metrics = resources.displayMetrics
+  Log.d(TAG, "metrics.widthPixels=${metrics.widthPixels}")
+  Log.d(TAG, "metrics.heightPixels=${metrics.heightPixels}")
+  //DPI的一个比例因子，120DPI：0.75f，160DPI：1.0f，240DPI：1.5f
+  Log.d(TAG, "metrics.density=${metrics.density}")
+  Log.d(TAG, "metrics.densityDpi=${metrics.densityDpi}")
+  Log.d(TAG, "metrics.scaledDensity=${metrics.scaledDensity}")
+  Log.d(TAG, "metrics.xdpi=${metrics.xdpi}")
+  Log.d(TAG, "metrics.ydpi=${metrics.ydpi}")
+```
+
+```bash
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.widthPixels=1920
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.heightPixels=1080
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.density=2.5
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.densityDpi=400
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.scaledDensity=2.5
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.xdpi=320.0
+2021-02-23 21:34:45.709 10402-10402/? D/MainActivity: metrics.ydpi=320.0
+```
+
+1dp是否在所有设备上的物理长度完全一致？不是，因为通过 dp 计算 px 是根据 `metrics.density` 来的，但是 `metrics.densityDpi` 并不是物理屏幕真实的 DPI，因为安卓的屏幕尺寸五花八门，所以系统将其划分到一个标准的DPI值[**hw-lcd.c**](https://android.googlesource.com/platform/external/qemu/+/emu-2.2-release/android/hw-lcd.c#18)：
+
+```c++
+#define  LCD_DENSITY_LDPI      120
+#define  LCD_DENSITY_MDPI      160
+#define  LCD_DENSITY_TVDPI     213
+#define  LCD_DENSITY_HDPI      240
+#define  LCD_DENSITY_260DPI    260
+#define  LCD_DENSITY_280DPI    280
+#define  LCD_DENSITY_300DPI    300
+#define  LCD_DENSITY_XHDPI     320
+#define  LCD_DENSITY_340DPI    340
+#define  LCD_DENSITY_360DPI    360
+#define  LCD_DENSITY_400DPI    400
+#define  LCD_DENSITY_420DPI    420
+#define  LCD_DENSITY_440DPI    440
+#define  LCD_DENSITY_XXHDPI    480
+#define  LCD_DENSITY_560DPI    560
+#define  LCD_DENSITY_XXXHDPI   640
+
+void hwLcd_setBootProperty(int density)
+{
+    char  temp[8];
+    /* Map density to one of our bucket values.
+       The TV density is a bit particular (and not actually a bucket
+       value) so we do only exact match on it.
+       电视不划分，直接用真实的物理屏幕密度
+    */
+    if (density != LCD_DENSITY_TVDPI) {
+        if (density < (LCD_DENSITY_LDPI + LCD_DENSITY_MDPI)/2)
+            density = LCD_DENSITY_LDPI;
+        else if (density < (LCD_DENSITY_MDPI + LCD_DENSITY_HDPI)/2)
+            density = LCD_DENSITY_MDPI;
+        else if (density < (LCD_DENSITY_HDPI + LCD_DENSITY_280DPI)/2)
+            density = LCD_DENSITY_HDPI;
+        else if (density < (LCD_DENSITY_280DPI + LCD_DENSITY_XHDPI)/2)
+            density = LCD_DENSITY_280DPI;
+        else if (density < (LCD_DENSITY_XHDPI + LCD_DENSITY_360DPI)/2)
+            density = LCD_DENSITY_XHDPI;
+        else if (density < (LCD_DENSITY_360DPI + LCD_DENSITY_400DPI)/2)
+            density = LCD_DENSITY_360DPI;
+        else if (density < (LCD_DENSITY_400DPI + LCD_DENSITY_420DPI) / 2)
+            density = LCD_DENSITY_400DPI;
+        else if (density < (LCD_DENSITY_420DPI + LCD_DENSITY_XXHDPI) / 2)
+            density = LCD_DENSITY_420DPI;
+        else if (density < (LCD_DENSITY_XXHDPI + LCD_DENSITY_560DPI)/2)
+            density = LCD_DENSITY_XXHDPI;
+        else if (density < (LCD_DENSITY_560DPI + LCD_DENSITY_XXXHDPI)/2)
+            density = LCD_DENSITY_560DPI;
+        else
+            density = LCD_DENSITY_XXXHDPI;
+    }
+    snprintf(temp, sizeof temp, "%d", density);
+    boot_property_add("qemu.sf.lcd_density", temp);
+}
+```
+
+
+
+| 密度限定符 | 说明                                                         |
+| :--------- | :----------------------------------------------------------- |
+| `ldpi`     | 适用于低密度 (ldpi) 屏幕 (~ 120dpi) 的资源。                 |
+| `mdpi`     | 适用于中密度 (mdpi) 屏幕 (~ 160dpi) 的资源（这是基准密度）。 |
+| `hdpi`     | 适用于高密度 (hdpi) 屏幕 (~ 240dpi) 的资源。                 |
+| `xhdpi`    | 适用于加高 (xhdpi) 密度屏幕 (~ 320dpi) 的资源。              |
+| `xxhdpi`   | 适用于超超高密度 (xxhdpi) 屏幕 (~ 480dpi) 的资源。           |
+| `xxxhdpi`  | 适用于超超超高密度 (xxxhdpi) 屏幕 (~ 640dpi) 的资源。        |
+| `nodpi`    | 适用于所有密度的资源。这些是与密度无关的资源。无论当前屏幕的密度是多少，系统都不会缩放以此限定符标记的资源。 |
+| `tvdpi`    | 适用于密度介于 mdpi 和 hdpi 之间的屏幕（约 213dpi）的资源。这不属于“主要”密度组。它主要用于电视，而大多数应用都不需要它。对于大多数应用而言，提供 mdpi 和 hdpi 资源便已足够，系统将视情况对其进行缩放。如果您发现有必要提供 tvdpi 资源，应按一个系数来确定其大小，即 1.33*mdpi。例如，如果某张图片在 mdpi 屏幕上的大小为 100px x 100px，那么它在 tvdpi 屏幕上的大小应该为 133px x 133px。 |
+
+
+
+## Bitmap
+
+位图，储存像素信息的数据结构（通过某种方式用Bit来映射色值），通过它可以得到一系列的图像属性，还可以对图像进行旋转，切割，放大，缩小等操作。
+
+### 创建Bitmap
+
+需要通过 BitmapFactory 来创建 Bitmap
+
+```kotlin
+BitmapFactory.decodeByteArray()
+BitmapFactory.decodeFile()
+BitmapFactory.decodeResource()
+BitmapFactory.decodeResourceStream()
+BitmapFactory.decodeStream()
+```
+
+`decodeFile` `decodeResource` `decodeResourceStream` 最终会都调用 `decodeStream`，`decodeResource` 在解析时会根据资源文件夹（inDensity）以及设备本身（inTargetDensity）的屏幕像素密度来做合适的缩放。
+
+### BitmapFactory.Options
+
+创建 Bitmap 时可以穿入 Options 对象配置参数：
+
+#### inScale、inDensity、inTargetDensity：
+
+如果`inScaled` 指定为 true 或者不指定（Options 构造函数默认置 true），则 decode 的时候会根据 `inDensity`、`inTargetDensity` 来进行缩放：
+
+`BitmapFactory.cpp doDecode()`
+
+```c++
+static jobject doDecode(JNIEnv* env, SkStreamRewindable* stream, jobject padding, jobject options) {
+    ......
+    if (options != NULL) {
+        sampleSize = env->GetIntField(options, gOptions_sampleSizeFieldID);
+        // Correct a non-positive sampleSize.  sampleSize defaults to zero within the
+        // options object, which is strange.
+        if (sampleSize <= 0) {
+            sampleSize = 1;
+        }
+        ...
+        //inScaled为true
+        if (env->GetBooleanField(options, gOptions_scaledFieldID)) {
+            const int density = env->GetIntField(options, gOptions_densityFieldID);
+            const int targetDensity = env->GetIntField(options, gOptions_targetDensityFieldID);
+            const int screenDensity = env->GetIntField(options, gOptions_screenDensityFieldID);
+            if (density != 0 && targetDensity != 0 && density != screenDensity) {
+                //根据inDensity、inTargetDensity 计算缩放比例 
+                scale = (float) targetDensity / density;
+            }
+        }
+    }
+    ...
+    int scaledWidth = size.width();
+    int scaledHeight = size.height();
+    bool willScale = false;
+
+    // Apply a fine scaling step if necessary.
+    if (needsFineScale(codec->getInfo().dimensions(), size, sampleSize)) {
+        willScale = true;
+        scaledWidth = codec->getInfo().width() / sampleSize;
+        scaledHeight = codec->getInfo().height() / sampleSize;
+    }
+    ...
+    // Scale is necessary due to density differences.
+    if (scale != 1.0f) {
+        willScale = true;
+        //根据缩放比例计算bitmap实际decode的宽高
+        scaledWidth = static_cast<int>(scaledWidth * scale + 0.5f);
+        scaledHeight = static_cast<int>(scaledHeight * scale + 0.5f);
+    }
+    ...
+    return GraphicsJNI::createBitmap(env, javaAllocator.getStorageObjAndReset(),
+            bitmapCreateFlags, ninePatchChunk, ninePatchInsets, -1);
+}
+```
+
+#### inJustDecodeBounds、inSampleSize
+
+inJustDecodeBounds 指定为 true 时，不会真正 decode ，不会分配像素内存数据，可以用于在创建 bitmap 之前获取图片的原始宽高跟 mime 类型：
+
+```kotlin
+val options = BitmapFactory.Options()
+options.inJustDecodeBounds = true
+val bitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower, options)
+
+Log.d(TAG, "bitmap=$bitmap")
+Log.d(TAG, "options.outWidth=${options.outWidth}")
+Log.d(TAG, "options.outHeight=${options.outHeight}")
+Log.d(TAG, "options.outMimeType=${options.outMimeType}")
+```
+
+```bash
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: bitmap=null
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outWidth=276
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outHeight=214
+2021-02-24 11:02:12.197 1980-1980/? D/MainActivity: options.outMimeType=image/png
+```
+
+inSampleSize 设置采样率，缩小原始图片大小。例如在 drawable-mdpi（160DPI） 放置了一张图片，原始分辨率为 276*214，在 400 DPI 的设备上加载，并设置采样率 inSampleSize = 2，看创建出来的 Bitmap 有多大？根据上面的分析，最终创建出来的位图宽应该为：
+$$
+outWidth = originalWidth\div{inSampleSize}*\frac{inTargetDensity}{inDensity}
+$$
+即 `276/2*(400/160) = 345`，通过代码验证一致：
+
+```kotlin
+options.inJustDecodeBounds = false
+options.inSampleSize = 2
+val scaleBitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower, options)
+Log.d(TAG, "scaleBitmap.width=${scaleBitmap.width}")
+Log.d(TAG, "scaleBitmap.height=${scaleBitmap.height}")
+```
+
+```bash
+2021-02-24 12:00:21.555 3671-3671/? D/MainActivity: scaleBitmap.width=345
+2021-02-24 12:00:21.555 3671-3671/? D/MainActivity: scaleBitmap.height=268
+```
+
+#### inpreferredConfig
+
+指定图片解码时**首选（非强制[Android inpreferredconfig参数分析](https://blog.csdn.net/ccpat/article/details/46834089)）**的颜色模式配置，默认为 `Bitmap.Config.ARGB_8888`
+
+| Bitmap.Config | 说明                                                         |      |
+| :------------ | :----------------------------------------------------------- | ---- |
+| ALPHA_8       | 每个 pixel 占 8 位，存储的是图片的透明值，占 1 个字节        |      |
+| RGB_565       | 每个 pixel 占 16 位，分别为 5-R、6-G、5-B 通道，没有 ALPHA 通道，占 2 个字节 |      |
+| ARGB_4444     | 每个 pixel 占 16 位，即每个通道用 4 位表示，占 2 个字节（质量太差，过时了） |      |
+| ARGB_8888     | 每个 pixel 占 32 位，每个通道用 8 位表示,占 4 个字节         |      |
+
+#### InBitmap、inMutable
+
+使用 InBitmap 能够复用 Bitmap 内存块（必须是 Mutable 的），避免大块内存的重新分配与回收。
+
+[Android Bitmap inBitmap 图片复用？](https://www.zhihu.com/question/32232584)
+
+#### inPremultiplied
+
+ALPHA通道预乘，默认为true。View系统跟 Canvas 默认绘制的图像都会通过预乘处理，所以不能设置为false，否则会抛出异常。
+
+### Bitmap占多大内存
+
+[Android 开发绕不过的坑：你的 Bitmap 究竟占多大内存？](https://cloud.tencent.com/developer/article/1071001)
+
+用上面 inSampleSize 的例子，drawable-mdpi（160DPI） 放置一张原始分辨率为 276*214，在 400 DPI 的设备上加载，占用多大内存？
+
+首先按照上面的知识计算 decode 出来的 Bitmap 有多大：
+
+```bash
+width: 276*(400/160) = 690
+height: 214*(400/160) = 535
+```
+
+由于 inpreferredConfig 默认为 `Bitmap.Config.ARGB_8888`，所以一个像素点占4个字节，即最终创建出来的 bitmap 大小为：
+
+```bash
+690*535*4 = 1476600
+```
+
+同样可以通过代码验证一致：
+
+```kotlin
+val bitmap = BitmapFactory.decodeResource(resources, R.drawable.big_sower)
+Log.d(TAG, "bitmap.width=${bitmap.width}")
+Log.d(TAG, "bitmap.height=${bitmap.height}")
+Log.d(TAG, "bitmap.rowBytes=${bitmap.rowBytes}")
+Log.d(TAG, "bitmap.byteCount=${bitmap.byteCount}")
+Log.d(TAG, "bitmap.allocationByteCount=${bitmap.allocationByteCount}")
+```
+
+```bash
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.width=690
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.height=535
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.rowBytes=2760
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.byteCount=1476600
+2021-02-25 10:10:39.134 2282-2282/cn.thismj.android.demo D/MainActivity: bitmap.allocationByteCount=1476600
+```
+
+### Bitmap.recycle()
+
+[Android Bitmap变迁与原理解析（4.x-8.x）](https://www.jianshu.com/p/d5714e8987f3)
+
+[Android | Bitmap的Java对象GC之后，对应的native内存会回收吗？](https://www.jianshu.com/p/6f042f9e47a8)
+
+2.3.3 版本之前，bitmap的像素数据储存在 native 里面，回收不可控，需要用户手动调用 `recycle()` 
+
+* Java 层的 Bitmap 对象是一个壳, 非常小, 因此有可能会出现 Native 堆快到了 3G, Java 堆才 10 MB, 10MB 是无法触发 Dalvik GC 的, 因此这个 java 对象的 finalize 并非那么容易调用, 因此可能会出现 Native 堆 OOM 的情况, 故需要我们手动 recycle
+
+3.0~7.1 版本之间，bitmap的像素数据储存在 Dalvik 碓中，可以通过 GC 自动回收，无须手动调用 `recycle()` 
+
+* 像素数据直接放置到 Java 堆, Java 堆就能直接统计到真正的内存数据, 能够根据内存使用情况准确触发 GC 回收数据，隐患便是 Java 堆内存空间比较小, 容器造成 Java 堆的 OOM
+
+- 4.4可以通过inInputShareable、inPurgeable让Bitmap的内存在native层分配（fresco、已废弃）
+
+8.0 开始，bitmap的像素数据又回到了 native 里面了，但是内存管理更优秀，不需要用户手动去回收了
+
+* `NativeAllocationRegistry` 利用虚引用感知 `Java` 对象被回收的时机，来回收`native`内存
+
+### Bitmap缓存管理
+
+**LruCache**：LRU(Least Recently Used,最近最少使用)算法，采用 LinkedHashMap 内存缓存，accessOrder 指定为 true，遍历基于访问顺序 
+
+[Android缓存机制-LRU cache原理与用法](https://juejin.cn/post/6844903678474715143)
+
+**DisLruCache**：磁盘缓存的 LruCache
+
+### 加载巨图如何防止OOM
+
+BitmapRegionDecoder，从巨图中 decode 局部 bitmap，切片合并。
+
+[https://github.com/LuckyJayce/LargeImage](https://github.com/LuckyJayce/LargeImage)
+
+### drawable跟mipmap资源的区别
+
+[[drawable和mipmap 目录下图片的区别](https://my.oschina.net/hejunbinlan/blog/1852697)](https://my.oschina.net/hejunbinlan/blog/1852697)
+
+放在 mipmap 资源文件夹下 decode 的 Bitmap 会默认设置 `setHasMipmap` 为 `true`，即对该 Bitmap 的渲染支持 mipmap（纹理映射）技术，会提前按缩小层级（按照2的倍数进行缩放，直到图像1x1的大小）生成一系列图片预先存储在内存中，提高图片渲染的速度和质量（内存使用增加）；Google 建议只是把 launcher icon 放置在 mipmap 文件夹中，这样可以让我们程序的 launcher 图标自动拥有跨设备密度展示的能力，比如说一台屏幕密度是 xxhdpi 的设备可以自动加载 mipmap-xxxhdpi 下的 icon 来作为应用程序的 launcher 图标，这样图标看上去就会更加细腻。
+
+
+
+## 进程
+
+### 进程类型
+
+按照进程的重要性排序：
+
+**前台进程**，满足以下任一条件
+
+* 具有用户可以交互的Activity（回调了`Activity.onResume()`）
+* 正在回调执行广播（`BroadcastReceiver.onReceive()`）
+* 正在回回调执行服务的生命周期方法（`Service.onCreate()` `Service.onStart()` `Service.onDestroy()`
+
+**可见进程**，满足以下任一条件
+
+* Activity可见，但不在前台（回调了`Activity.onPause()`）
+* 具有前台服务（`Service.startForeground()`）
+* 系统正在使用其托管的服务实现用户知晓的特定功能，例如动态壁纸、输入法服务等
+
+**服务进程**
+
+通过 `startService()` 启动了一个后台服务（如果后台服务运行时间过长，会降级至缓存服务，避免超长时间运行的服务因内存泄露或其他问题占用大量内存）
+
+**缓存进程**
+
+目前不需要的进程，缓存是为了更高效地切换应用。通常包含回调了 `onStop() `方法的 `Activity` 实例，例如按下 Home 键
+
+### UID、PID
+
+在 Android 中 UID 代表着一个应用程序的唯一标识，APP应用的 UID 从（`Process.FIRST_APPLICATION_UID`）10000 开始，在安装的时候就确定了下来，可以通过以下方式查看：
+
+```bash
+ cat /data/system/packages.xml
+ ......
+ <package name="cn.thismj.android.demo" codePath="/data/app/cn.thismj.android.demo-2" nativeLibraryPath="/data/app/cn.thismj.android.demo-2/lib" primaryCpuAbi="armeabi-v7a" publicFlags="675856198" privateFlags="0" ft="1755936e050" it="175593663a4" ut="1755936f317" version="1" userId="10120">
+        <sigs count="1">
+            <cert index="2" />
+        </sigs>
+        <perms>
+            <item name="com.google.android.c2dm.permission.RECEIVE" granted="true" flags="0" />
+            <item name="android.permission.RECEIVE_BOOT_COMPLETED" granted="true" flags="0" />
+            <item name="android.permission.INTERNET" granted="true" flags="0" />
+            <item name="android.permission.ACCESS_NETWORK_STATE" granted="true" flags="0" />
+            <item name="android.permission.WAKE_LOCK" granted="true" flags="0" />
+        </perms>
+        <proper-signing-keyset identifier="50" />
+ </package>
+ ......
+```
+
+如上图，`cn.thismj.android.demo` 的 UID 为 10120。
+
+PID 代表的是进程的唯一标识，可以通过 ps 命令查询相关信息：
+
+```bash
+ps
+USER      PID   PPID  VSIZE  RSS   WCHAN            PC  NAME
+......
+root      7196  1     1562732 60484 poll_sched b0d24700 S zygote
+......
+u0_a120   13539 7196  1149988 58764 SyS_epoll_ b0d24514 S cn.thismj.android.demo
+......
+```
+
+USER：u{uid / AID_USER(100000)}_a{uid % AID_USER(100000)-AID_APP(10000)} = u0_a120
+
+PID：进程ID
+
+PPID：父进程ID，所有 APP 进程 fork 自 zygote 进程，所以 13539 进程的父进程是 7196
+
+### 进程退出
+
+`System.exit(status)` 内部调用了 `Runtime.getRuntime().exit(status)`，status值不是 0 时代表非正常退出
+
+`android.os.Process.killProcess(android.os.Process.myPid())`
+
+`AMS.killBackgroundProcesses(packagenamw,userId)`
+
+`AMS.forceStopPackage(packagenamw,userId)`
+
+### 进程保活
+
+* 监听全局静态广播，比如开机广播、解锁屏广播、网络状态广播等，来启动应用的后台服务（高版本失效）
+* 提高进程的oom_adj值，例如 `startForeground()`启动前台Service（只能延缓进程的死亡）
+* JobScheduler（不需要稳定可靠性、精确时间的场景）
+* fork native进程拉活（5.0以uid杀进程组，失效）
+* 1像素Activity、后台无声音乐？？？？
+* 加入手机厂商白名单&引导用户把app加入系统白名单
 
 ### 易出错的地方
 

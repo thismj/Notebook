@@ -50,6 +50,12 @@ var table: Map<String, Int>? = null
 private set
 ```
 
+## 集合
+
+List转map
+
+
+
 ##异常
 
 [浅谈Kotlin的Checked Exception机制](https://blog.csdn.net/guolin_blog/article/details/108817286)
@@ -583,7 +589,7 @@ Flow的对比：
 | transform |  转换，一对多映射，可以转换为多个其它数据 |
 | map |  数据转换，一对一映射，转换为一个其它数据     |
 | flatMapConcat |  数据转换，一对一映射，映射为一个新的数据流Flow，顺序收集，等新的Flow收集完毕再发送下一个值     |
-| flatMapConcat |  数据转换，一对一映射，映射为一个新的数据流Flow，并发收集，可以指定最大的并发流的个数    |
+| flatMapMerge |  数据转换，一对一映射，映射为一个新的数据流Flow，并发收集，可以指定最大的并发流的个数    |
 | take |  限制数据流长度    |
 | conflate |  当收集比发送慢时，只收集目前最新的值  |
 | zip |  组合多个流，每个流都有新值产生的时候再组合 |

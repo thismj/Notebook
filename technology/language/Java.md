@@ -6,16 +6,16 @@
 
 ### 基本类型
 
-| 类型    | 封装类型  | 长度  | 取值范围                       |
-| ------- | --------- | ----- | ------------------------------ |
-| byte    | Byte      | 1字节 | -2^7 ~ 2^7-1                   |
-| short   | Short     | 2字节 | -2^15 ~ 2^15-1                 |
-| int     | Integer   | 4字节 | -2^31 ~ 2^31-1                 |
-| long    | Long      | 8字节 | -2^63 ~ 2^63-1                 |
-| float   | Float     | 4字节 | 1.401298e-45 ~ 3.402823e+38    |
-| double  | Double    | 8字节 | 4.9000000e-324 ~ 1.797693e+308 |
-| char    | Character | 2字节 | 0 ~ 65535                      |
-| boolean | Boolean   | ?     | true 、false                   |
+| 类型    | 封装类型  | 长度  | 取值范围                                                     |
+| ------- | --------- | ----- | ------------------------------------------------------------ |
+| byte    | Byte      | 1字节 | -2^7 ~ 2^7-1 [byte 取值范围](https://www.runoob.com/note/45389) |
+| short   | Short     | 2字节 | -2^15 ~ 2^15-1                                               |
+| int     | Integer   | 4字节 | -2^31 ~ 2^31-1                                               |
+| long    | Long      | 8字节 | -2^63 ~ 2^63-1                                               |
+| float   | Float     | 4字节 | 1.401298e-45 ~ 3.402823e+38                                  |
+| double  | Double    | 8字节 | 4.9000000e-324 ~ 1.797693e+308                               |
+| char    | Character | 2字节 | 0 ~ 65535                                                    |
+| boolean | Boolean   | ?     | true 、false                                                 |
 
 [参考文章]((https://www.zhihu.com/question/39462340)
 上面基本类型的字节长度是从 Java 语言角度来表述的，其明确了不同类型的取值范围。但是 JVM 在字节码层面上支持的整数类型只有 int 和 long（为啥？JVM 字节码指令是单字节的，最多只有256条，为了节省指令数目，不可能每种类型都占用一个指令），所有比 int 小的整数类型都会被提升为 int 来运算，所以单纯从运算效率来看，使用byte、 short  跟 int、long 没有啥区别。但是基本类型作为对象的字段或者数组元素储存时，确实是占用上表中对应的字节长度，所以使用合适的基本类型是可以节省空间的。
@@ -33,8 +33,85 @@ byte b2 = 12;
 b2 += 128; //隐式向下转型，被编译成 b2 = (byte)(b2 + 128)
 ```
 
-> A compound assignment expression of the form E1 op= E2 is equivalent to E1 = (T)((E1) op >(E2)), where T is the type of E1, except that E1 is evaluated only once.
+> A compound assignment expression of the form  is equivalent to E1 = (T)((E1) op (E2)), where T is the type of E1, except that E1 is evaluated only once. （E1 op= E2 E1只取址一次，读写地址保证一致；E1 = E1 op E2 取址两次，右边读取一次，左边赋值取一次）
 
+[15.26.2. Compound Assignment Operators](https://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.26.2)
+
+float强转int会舍弃掉小数部分，如果要做到四舍五入应该先 `+0.5f`
+
+```java
+int a = (int) 10.5f;   //a = 10;
+
+float f = 10.5f;
+int a = (int) (f + 0.5f);   // a = 11;
+```
+
+
+
+### 类
+
+#### 非静态内部类&匿名内部类持有外部引用
+
+看一段代码，Test.Java
+
+```java
+public class Test {
+    public void test(Runnable runnable) {
+        new Runnable() {
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
+    }
+}
+```
+
+经过 javac 编译之后，生成两个 class 文件，Test.class、Test$1.class，反编译生成的匿名内部类文件：
+
+```bash
+➜  ~ javap -p /Users/aero.tang/IdeaProjects/Heyraud-Daily-Java/out/production/Heyraud-Daily-Java/Test\$1.class
+Compiled from "Test.java"
+class Test$1 implements java.lang.Runnable {
+  final java.lang.Runnable val$runnable;
+  final Test this$0;
+  Test$1(Test, java.lang.Runnable);
+  public void run();
+}
+```
+
+由上可知，匿名内部类在编译之后生成了一个带有两个参数的构造函数，并由此持有外部类 Test 以及外部方法传参 runnable 的引用。
+
+#### 继承、实现
+
+isAssignableFrom 与 instanceOf 的区别：
+
+`obj instanceof class` 用来判断一个对象实例 `obj` 是否是 `class` 的实例，instanceOf  是一个操作符，obj 必须是引用类型或 null，class 必须是具体的类型（继承自无泛型的类和接口、参数化类型但是没有有界通配符等），否则会发生编译错误
+
+`class1.isAssignableFrom(class2)` 用来判断一个类 `Class1`是否与`Class2`相同，或者`Class1`是否是`Class2`的超类或接口
+
+`class.isInstance(obj)` 内部调用了 `class.isAssignableFrom(obj.getClass())` 用来判断 `obj` 是否可以强转为 `class 的实例`，isInstance() 是 Class 类对象的一个方法，相当于  instanceOf  操作符的动态等效方法
+
+instanceOf 的原理，首先从语言层面来说，等价于以下伪代码，即如果 obj 不为 null 并且 (T) obj 不抛 ClassCastException：
+
+```java
+// obj instanceof T
+boolean result;
+if (obj == null) {
+  result = false;
+} else {
+  try {
+      T temp = (T) obj; // checkcast
+      result = true;
+  } catch (ClassCastException e) {
+      result = false;
+  }
+}
+```
+
+从编译层面，javac 编译的时候能识别 instanceOf  关键字，并生成一条对应的 instanceOf(0xc1) 字节码指令。
+
+[从JVM层面](Java instanceof 关键字是如何实现的？ - 敖琪的回答 - 知乎 https://www.zhihu.com/question/21574535/answer/18989437)
 
 ###  自动装箱与拆箱
 
@@ -49,7 +126,11 @@ b2 += 128; //隐式向下转型，被编译成 b2 = (byte)(b2 + 128)
 
 [JAVA 中的 StringBuilder 和 StringBuffer 适用的场景是什么？](https://www.zhihu.com/question/20101840)
 
-[Java 中 String 类为什么要设计成不可变的](https://zhuanlan.zhihu.com/p/115322967)
+[Java 中 String 类为什么要设计成不可变的](https://blog.csdn.net/renfufei/article/details/16808775)
+
+* 保证线程安全
+* 字符串常量池的前提
+* hashcode缓存，提升Hash集合类性能
 
 [请别再拿“String s = new String("xyz");创建了多少个String实例”来面试了吧](https://www.iteye.com/blog/rednaxelafx-774673)
 
@@ -412,6 +493,12 @@ interrupt/interrupted/isInterrupted
 注意：因为permit默认是0，所以一开始调用park()方法，线程必定会被阻塞。调用unpark(thread)方法后，会自动唤醒thread线程，即park方法立即返回。
 
 带 blocker 的 park 方法可以提供传递给开发人员更多的信息，帮助监视工具和诊断工具确定线程收阻塞的原因。
+
+#### ThreadLocal
+
+每个线程在使用 ThreaLocal 变量时都会初始化一个完全独立的副本来保证线程安全。
+
+ThreaLocal 是一个泛型类，可以接受任何类型的对象。Thread 实例里面有个类型为 ThreaLocal.ThreadLocalMap 的 threadLocals 变量，实际上 ThreaLocal 是对这个  ThreadLocalMap 集合的封装，这个Map是专门给 ThreaLocal 而设计的，它的元素 Entry 继承自 WeakReference<ThreadLocal>，key 就是 ThreaLocal  对象的弱引用，所以当外部不存在对 ThreaLocal 对象的强引用时，在下一次GC的时候会自动回收 ThreadLocal 对象。
 
 ### 锁
 
