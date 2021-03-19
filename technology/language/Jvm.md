@@ -29,7 +29,7 @@ i = i + 1;
 
 ### 有序性
 
-???
+在Java中，可以使用 synchronized 或者 volatile 保证多线程之间操作的有序性。
 
 ### 内存间交互的八种方式
 
@@ -70,7 +70,83 @@ JMM 对 8 种内存交互操作制定的规则：
 7. 如果一个变量事先没有被 lock 操作锁定，那就不允许对它执行 unlock 操作，也不允许去 unlock 一个被其他线程锁定的变量。
 8. **对一个变量执行 unlock 操作之前，必须先把此变量同步回主内存中（执行store、write操作）**。
 
+### Volatile
+
+volatile 的作用主要有以下两个：
+
+* 保证线程间变量的可见性（并不能保证线程安全）
+* 禁止 CPU 进行指令重排序
+
+指令的重排序：为了使指令更加符合 CPU 的执行特性，提高执行效率，指令的执行顺序可以跟代码逻辑不一致。在单线程环境下是不影响执行结果的，但是多线程环境下就不一定了，所以在多线程环境下可以使用 volatile 关键字来禁用指令重排序。对具有 volatile  修饰的变量做读写操作时，其前面的操作必须执行完毕且对后面的操作可见，并且后面的操作一定还没有执行；在进行指令优化时，不能把访问 volatile  变量前的语句放到其后面，也不能把后面的语句放到前面，当然前面或者后面那些语句的顺序是不能保证的。
+
+volatile 禁止指令重排序原理，内存屏障（Memory Barrier）：
+
+| **屏障类型** | **指令示例**               | **说明**                                                     |
+| ------------ | -------------------------- | ------------------------------------------------------------ |
+| LoadLoad     | Load1; LoadLoad; Load2     | 保证load1的读取操作在load2及后续读取操作之前执行             |
+| StoreStore   | Store1; StoreStore; Store2 | 在store2及其后的写操作执行前，保证store1的写操作已刷新到主内存 |
+| LoadStore    | Load1; LoadStore; Store2   | 在stroe2及其后的写操作执行前，保证load1的读操作已读取结束    |
+| StoreLoad    | Store1; StoreLoad; Load2   | 保证store1的写操作已刷新到主内存之后，load2及其后的读操作才能执行 |
+
+volatile 读操作后插入 LoadLoad 、LoadStore内存屏障，即后续的 Load 跟 Store 都要等前面的 Load 完成。
+
+![](https://pic4.zhimg.com/80/v2-437ebf30028ea4364533da27460a3077_720w.jpg)
+
+volatile 写操作前插入 StoreStore 内存屏障，确保前面的 Store 完成了；后面插入 StoreLoad 屏障，确保后续的 Load 要等前面的 Store 完成。
+
+![](https://pic4.zhimg.com/80/v2-52d9c8897b541c9e4e5a41be59b482ef_720w.jpg)
+
+## 运行时数据区
+
+Java 虚拟机在执行 Java 程序中会把它所管理的内存划分为若干个不同的数据区域，如下图所示（虚拟机规范，具体虚拟机的实现或者叫法都有区别）：
+
+![](https://upload-images.jianshu.io/upload_images/2614605-246286b040ad10c1.png)
+
+**程序计数器**：线程私有的，位于工作内存，可以看作是当前线程执行字节码的行号指示器。如果线程正在执行一个 Java 方法，则记录的是正在执行的虚拟机字节码指令的地址。
+
+**Java虚拟机栈**：线程私有的，位于工作内存。每个 Java 方法执行时都会创建一个栈帧，用于储存局部变量表、操作数栈、动态链接、方法出口等信息。每一个方法从调用直至完成的过程，就对应着一个栈帧在虚拟机栈中入栈和出栈的过程。局部变量表存放了编译器可知的各种基本类型，在编译期间完成分配，一个方法需要在栈帧中分配多大的局部变量空间时完全确定的。该区域会触发 StackOverFlow 和 OutOfMemoryError 异常。
+
+**本地方法栈**：与 Java 虚拟机栈类似，但是执行的是 Native 方法（HotSpot虚拟机中并不区分虚拟机栈和本地方法栈）
+
+**Java堆**：所有线程共享，位于主内存，几乎所有的对象实例都在堆中分配。从内存回收的角度来看，Java 堆可以细分为新生代和老年代，再细致一点的有 Eden 空间、From Survivor空间，To Survivor空间等。从内存分配的角度来看，线程共享的 Java 堆中可能分配出多个线程私有的分配缓冲区(Thread Local Allocations Buffer，TLAB )。Java 堆可以处于物理上不连续的内存空间中，只需要逻辑上是连续的即可，当前主流的虚拟机通过（-Xmx 最大堆内存 和 -Xms 初始化堆内存 ）控制堆的大小。该区域会触发 OutOfMemoryError 异常。
+
+**方法区**：所有线程共享，用于储存已被虚拟机加载的类信息，常量、静态变量、即时编译器编译后的代码等数据（在 HotSpot 中称之为永久代 Permanent Generation -> PermGen）。该区域会触发 OutOfMemoryError 异常。
+
+**运行时常量池**：是方法区的一部分，具备动态性，并不要求常量一定只有在编译器产生，在运行时也可以将新的常量放进池中，例如 String.intern()。
+
+**直接内存**：NIO 基于通道（Channel）和缓冲区（Buffer）的I/O 方式，可以通过 DirectByteBuffer 对象引用堆外内存，并不属于虚拟机运行时数据区的一部分。
+
+![](https://segmentfault.com/img/remote/1460000038862246)
+
+[JDK版本运行时数据区对比](https://segmentfault.com/a/1190000038862239)
+
+[[Java8内存模型—永久代(PermGen)和元空间(Metaspace)](https://www.cnblogs.com/paddix/p/5309550.html)](https://www.cnblogs.com/paddix/p/5309550.html)
+
+- JDK 1.6：有永久代，静态变量存放在永久代上。
+- JDK 1.7：有永久代，但已经把字符串常量池、静态变量，存放在堆上。逐渐的减少永久代的使用。
+- JDK 1.8：无永久代，运行时常量池、类常量池，都保存在元数据区，也就是常说的`元空间`（MetaSpace）。但字符串常量池仍然存放在堆上。
+
+
+
 ## 类加载机制
+
+### 类加载过程
+
+虚拟机把 Class 文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可以被虚拟机直接使用的 Java 类型，这就是虚拟机的类加载机制。
+
+Java 可以在运行过程中动态加载从网络或者其他地方的 Class 文件的二进制流作为程序代码的一部分。
+
+![](https://img-blog.csdnimg.cn/2019062014564165.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3poYW9jdWl0,size_16,color_FFFFFF,t_70)
+
+
+
+#### 加载
+
+* 通过类的全名获取 Class 文件的二进制流
+* 将二进制流所代表的静态储存结构转换成方法区的运行时数据结构
+* 在内存中生成一个 java.lang.Class 对象，作为方法区的这个类的各种数据的访问入口
+
+####
 
 ###双亲委托机制
 
