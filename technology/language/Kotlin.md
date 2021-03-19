@@ -568,8 +568,8 @@ Flow的对比：
 
 | Flow   | 用法 |
 | ------ | ---- |
-| flow | 基本的流构建器，`emit()`发送数据，是 suspend 的，所有数据的发送都在同一个协程，可以通过 `flowOn` 切换发送协程 |
-| channelFlow{} | 通道流构建器，`send()`发送数据，是 suspend 的；`offer()` 非 suspend 的，只要在发送buffer范围内，就能offer成功，否则失败。可以在多个协程里面发送数据，是并发的 |
+| flow | 基本的流构建器，`emit()`发送数据，是 suspend 的，所有数据的发送都在同一个协程，只能通过 `flowOn` 切换发送协程 |
+| channelFlow{} | 通道流构建器，`send()`发送数据，是 suspend 的；`offer()` 非 suspend 的，只要在发送buffer范围内，就能offer成功，否则失败。可以在多个协程里面发送数据，是并发的，可以使用 `withContext`切换协程发送数据 |
 | callbackFlow{} | 实际也是 ChannelFlow，只是命名不一样来代表不同的意图，很明显这个专门用来在 Callback 回调中实现异步流的，并且从1.3.4开始，callbackFlow 必须显式调用 `awaitClose()` |
 
 
