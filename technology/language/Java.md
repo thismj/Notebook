@@ -82,7 +82,36 @@ class Test$1 implements java.lang.Runnable {
 
 由上可知，匿名内部类在编译之后生成了一个带有两个参数的构造函数，并由此持有外部类 Test 以及外部方法传参 runnable 的引用。
 
+#### 继承、实现
 
+isAssignableFrom 与 instanceOf 的区别：
+
+`obj instanceof class` 用来判断一个对象实例 `obj` 是否是 `class` 的实例，instanceOf  是一个操作符，obj 必须是引用类型或 null，class 必须是具体的类型（继承自无泛型的类和接口、参数化类型但是没有有界通配符等），否则会发生编译错误
+
+`class1.isAssignableFrom(class2)` 用来判断一个类 `Class1`是否与`Class2`相同，或者`Class1`是否是`Class2`的超类或接口
+
+`class.isInstance(obj)` 内部调用了 `class.isAssignableFrom(obj.getClass())` 用来判断 `obj` 是否可以强转为 `class 的实例`，isInstance() 是 Class 类对象的一个方法，相当于  instanceOf  操作符的动态等效方法
+
+instanceOf 的原理，首先从语言层面来说，等价于以下伪代码，即如果 obj 不为 null 并且 (T) obj 不抛 ClassCastException：
+
+```java
+// obj instanceof T
+boolean result;
+if (obj == null) {
+  result = false;
+} else {
+  try {
+      T temp = (T) obj; // checkcast
+      result = true;
+  } catch (ClassCastException e) {
+      result = false;
+  }
+}
+```
+
+从编译层面，javac 编译的时候能识别 instanceOf  关键字，并生成一条对应的 instanceOf(0xc1) 字节码指令。
+
+[从JVM层面](Java instanceof 关键字是如何实现的？ - 敖琪的回答 - 知乎 https://www.zhihu.com/question/21574535/answer/18989437)
 
 ###  自动装箱与拆箱
 
