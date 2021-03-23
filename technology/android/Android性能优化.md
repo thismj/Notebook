@@ -240,24 +240,6 @@ shamu:/ # cat proc/13539/oom_score_adj
 
 如何查看进程的 oom_adj 值：
 
-```bash
-ag501:/ # ps | grep dji                                                                                                                                        
-root      102   2     0      0     rescuer_th 0000000000 S dji_bat_charge_
-root      324   1     102152 12996 binder_thr 7154b33cf4 S /system/bin/djilink
-root      773   1     9004   1896  SyS_epoll_ 7c4d740c04 S /system/bin/dji_wms
-system    1364  326   1575832 81752 SyS_epoll_ 7d8a757c04 S com.dji
-u0_a45    1485  326   4138760 543848 SyS_epoll_ 7d8a757c04 S com.dji.agras
-root      1610  1     39332  5796  hrtimer_na 71f55a65f4 S /system/bin/dji_upgrade
-root      1617  1     25964  5888  hrtimer_na 7b66fe15f4 S /system/bin/dji_upgrade
-u0_a45    1665  326   2510640 231056 SyS_epoll_ 7d8a757c04 S dji.mg.app.sdk
-u0_a45    2015  326   2310356 119356 SyS_epoll_ 7d8a757c04 S com.dji.agras:pushservice
-ag501:/ # cat /proc/1485/oom_adj                                                                                                                               
-0
-
-```
-
-
-
 ### 内存优化的意义
 
 	1. 防止OOM，提高应用稳定性
