@@ -146,9 +146,103 @@ Java 可以在运行过程中动态加载从网络或者其他地方的 Class �
 * 将二进制流所代表的静态储存结构转换成方法区的运行时数据结构
 * 在内存中生成一个 java.lang.Class 对象，作为方法区的这个类的各种数据的访问入口
 
-####
+#### 验证
+
+验证是连接阶段的第一步，确保 Class 文件符合 Java 虚拟机规范：
+
+* 文件格式验证，是否以魔数0xCAFEBABE开头、主次版本号是否在当前 Java 虚拟机接受范围内等等
+* 元数据验证，对类的信息进行语义校验，例如是否错误地覆盖了 final 类，是否实现接口中所有的方法等等
+* 字节码验证，对类的方法体进行校验分析
+* 符号引用验证， 确保该类可以访问它依赖的某些外部类、方法、字段等资源
+
+#### 准备
+
+给静态变量分配内存，并设置类变量初始值，通常情况下是数据类型的零值，例如：
+
+```java
+public static int value = 123;
+```
+
+`value` 在准备阶段过后的初始值是0而不是123
+
+```java
+public static final int value = 123;
+```
+
+`value` 在准备阶段过后的初始值是123
+
+#### 解析
+
+把 Class 常量池内的符号引用替换为直接引用的过程
+
+* 类或接口的解析
+* 字段解析
+* 方法解析
+* 接口方法解析
+
+#### 初始化
+
+类加载过程的最后一个步骤，真正开始执行类中编写的程序代码，将主导权移交给应用程序，实际上就是执行 `<clinit>() `方法的过程，`<clinit>() `方法是由编译器自动收集类中的所有静态变量和静态语句块合并产生的，执行的顺序按照语句在源文件中出现的顺序决定，静态语句块只能访问定义在它前面的静态变量，定义在它后面的静态变量只能进行赋值操作。Java虚拟机会保证子类在执行`<clinit>() `方法前，父类的 `<clinit>() ` 方法已经执行过了。
+
+Java 虚拟机必须保证一个类的 `<clinit>() ` 方法在多线程环境中被正确地加锁同步，确保只会有一个线程去执行初始化方法，其它线程都会阻塞等待。
+
+
 
 ###双亲委托机制
+
+![](https://segmentfault.com/img/bVcHO1J)
+
+
+
+Bootstrap ClassLoader：C++实现的（仅仅 HotSpot 虚拟机），虚拟机自身的一部分，负责加载 `<JAVA_HOME>/lib` 目录的类文件，`rt.jar`、`tools.jar`
+
+Extension ClassLoader：ExtClassLoader，继承自 `java.lang.ClassLoader`，负责加载 `<JAVA_HOME>/lib/ext` 目录的类文件
+
+Application ClassLoader：AppClassLoader，继承自 `java.lang.ClassLoader`，负责加载 `ClassPath` 上所有的类库，程序中默认的类加载器
+
+```java
+    protected Class<?> loadClass(String name, boolean resolve)
+        throws ClassNotFoundException
+    {
+        synchronized (getClassLoadingLock(name)) {
+            // 先检查是否已经加载过，加载过就不会再重复加载了
+            Class<?> c = findLoadedClass(name);
+            if (c == null) {
+                long t0 = System.nanoTime();
+                try {
+                    if (parent != null) {
+                        //委托给父加载器加载
+                        c = parent.loadClass(name, false);
+                    } else {
+                        //没有父父加载器则去Bootstrap ClassLoader查看是否加载过
+                        c = findBootstrapClassOrNull(name);
+                    }
+                } catch (ClassNotFoundException e) {
+                    // ClassNotFoundException thrown if class not found
+                    // from the non-null parent class loader
+                }
+
+                if (c == null) {
+                    // If still not found, then invoke findClass in order
+                    // to find the class.
+                    long t1 = System.nanoTime();
+                    //父加载器加载失败之后，再尝试自己加载
+                    c = findClass(name);
+
+                    // this is the defining class loader; record the stats
+                    sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                    sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                    sun.misc.PerfCounter.getFindClasses().increment();
+                }
+            }
+            if (resolve) {
+                //类加载机制的连接过程
+                resolveClass(c);
+            }
+            return c;
+        }
+    }
+```
 
 
 
