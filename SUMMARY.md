@@ -13,6 +13,7 @@
         * [Android Studio](technology/android/AndroidStudio.md)
         * [Android常用第三方库](technology/android/Android常用第三方库.md)
         * [Protocol Buffers](technology/android/Protocol Buffers.md)
+        * [JNI和NDK](technology/android/JNI和NDK.md)
     * [编程语言](technology/language/README.md)
         * [Java](technology/language/Java.md)
         * [Kotlin](technology/language/Kotlin.md)
