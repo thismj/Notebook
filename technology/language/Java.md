@@ -504,6 +504,12 @@ ThreaLocal 是一个泛型类，可以接受任何类型的对象。Thread 实�
 
 [面试必问的CAS，你懂了吗？](https://zhuanlan.zhihu.com/p/34556594)
 
+CAS 自旋操作可以避免线程切换的开销，但是存在以下问题：
+
+1. ABA问题，解决办法是变量增加版本号。
+2. 长时间自旋，CPU 开销大，即决办法是适应性自旋锁，自旋超过一定次数后，则挂起线程。
+3. 只能保证一个共享变量的原子操作（JDK 1.5 提供 `AtomicReference`,可以把多个变量放在一个对象来进行 CAS 操作）
+
 [死磕Synchronized底层实现](https://github.com/farmerjohngit/myblog/issues/12)
 
 [[不可不说的Java“锁”事](https://tech.meituan.com/2018/11/15/java-lock.html)](https://tech.meituan.com/2018/11/15/java-lock.html)
@@ -511,6 +517,12 @@ ThreaLocal 是一个泛型类，可以接受任何类型的对象。Thread 实�
 Java 1.6之前都是 Synchronized 都是重量级锁，利用操作系统底层的同步机制实现，对象头的 mark word 指向一个堆中 monitor 对象的指针
 
 无锁->偏向锁->轻量级锁->重量级锁
+
+#### 公平锁与非公平锁
+
+公平锁按照多线程申请锁的顺序来获取锁，通过队列来实现，先进先出。优点是等待锁的线程不会饿死，缺点是整体吞吐率较非公平锁低，CPU 唤醒阻塞线程的开销比非公平锁大。
+
+非公平锁是多个线程加锁时直接获取锁，当获取不到时才会加进等待队列的队尾，线程有几率不阻塞直接获取锁，整体的吞吐量高，可以减少唤起线程的开销，但是又可能会造成某个线程饿死，或者等待很久才能获取锁。
 
 [谈谈 synchronized 和 ReentrantLock 的区别](https://cloud.tencent.com/developer/article/1459414)
 
@@ -529,6 +541,26 @@ JMM：Java内存模型
 [[Java线程池实现原理及其在美团业务中的实践](https://tech.meituan.com/2020/04/02/java-pooling-pratice-in-meituan.html)](https://tech.meituan.com/2020/04/02/java-pooling-pratice-in-meituan.html)
 
 [关于线程池你不得不知道的一些设置](https://objcoding.com/2019/04/14/threadpool-some-settings/#%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BA%BF%E7%A8%8B%E5%8F%AF%E4%BB%A5%E8%A2%AB%E5%9B%9E%E6%94%B6%E5%90%97)
+
+#### Executors
+
+* newCachedThreadPool
+
+  核心线程数为0，最大工作线程数为 `Integer.MAX_VALUE`，任务缓存队列为 `SynchronousQueue`，当有新任务添加时，看是否有可用线程，如果没有则直接创建新的工作线程执行，工作线程在 60s 内没有任务执行则会被回收。
+
+* newFixedThreadPool
+
+  核心线程数和最大线程数都为指定的同一个值，任务缓存队列为 `LinkedBlockingQueue`
+
+* newScheduledThreadPool
+
+  核心线程数为指定的值，最大工作线程数为 `Integer.MAX_VALUE`，任务缓存队列为 `DelayedWorkQueue`（阻塞优先队列，任务必须实现 `RunnableScheduledFuture` 接口）
+
+* newSingleThreadExecutor
+
+  核心线程数和最大线程数都为1，任务缓存队列为 `LinkedBlockingQueue`
+
+  
 
 Timer、ScheduledThreadPoolExecutor 的区别
 

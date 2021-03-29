@@ -170,7 +170,57 @@ AppCompat 的 View 获取到的是 TintContextWrapper（getResource() 具有对�
 ### 生命周期
 ![](https://developer.android.com/images/fragment_lifecycle.png)
 
+Activity+Fragment的完整生命周期：
+
+<img src="https://img-blog.csdn.net/20170110225615363" style="zoom:80%;" />
+
+Activity+Fragment 启动生命周期：
+
+```bash
+Activity onCreate()
+Fragment onAttach()
+Fragment onCreate()
+Fragment onCreateView()
+Fragment onViewCreated()
+Activity onStart()
+Fragment onActivityCreated()
+Fragment onStart()
+Activity onPostCreate()
+Activity onResume()
+Activity onPostResume()
+Activity onReumeFragments()
+Fragment onResume()
+```
+
+销毁生命周期：
+
+```bash
+Activity onPause()
+Fragment onPause()
+Activity onStop()
+Fragment onStop()
+Activity onDestroy()
+Fragment onDestroyView()
+Fragment onDestroy()
+Fragment onDetach()
+```
+
+重启生命周期：
+
+```bash
+Activity OnRestart()
+Activity onStart()
+Fragment onStart()
+Activity onResume()
+Activity onPostResume()
+Activity onReumeFragments()
+Fragment onResume()
+```
+
+
+
 ### 概述
+
 Fragment：理解为针对 View 的一个封装框架
 
 ### 管理与事务
