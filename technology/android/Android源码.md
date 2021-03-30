@@ -946,3 +946,27 @@ final void appNotResponding(ProcessRecord app, ActivityRecord activity,
 
 
 
+## RecyclerView
+
+四级缓存：
+
+`mAttachedScrap`：屏幕内 `itemView`缓存，无需`createViewHolder()`和`bindViewHolder()`。
+
+`mCachView`：保存最近移除出屏幕的 `ViewHolder`，包含 `data`和`position`数据，复用时必须时相同位置的`ViewHolder`才能复用，应用于来回滑动的场景，复用时不需要重新`bindViewHoder`，默认缓存大小为 2。
+
+`mViewCacheExtension`：自定义缓存实现，默认无。
+
+`mRecyclerPool`：`mCachView`满了之后，按照先进先出的原则，把最先缓存的 `ViewHolder` 转移到`mRecyclerPool`中，此时会清除数据，复用需要重新`bindViewHoder()`。
+
+性能优化：
+
+设置`RecyclerView.addOnScrollListener()，来在滑动过程中停止加载的操作。
+
+局部刷新`notifyItemXXX`、`payload`
+
+通过`RecyclerView.setRecycledViewPool(pool)`共用缓存池
+
+增大 `mCachView`缓存的最大数量，空间换时间
+
+如果高度固定，可以设置`setHasFixedSize(true)`来避免`requestLayout`浪费资源，否则每次更新数据都会重新测量高度
+
