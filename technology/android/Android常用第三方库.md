@@ -718,3 +718,38 @@ public Response intercept(Chain chain) throws IOException {
   }
 ```
 
+
+
+## LeakCanary
+
+知识点1：
+
+通过 `Application` 的 `registerActivityLifecycleCallbacks` 方法监听 `Activity`的生命周期，在 `onActivityDestroy()` 方法里面开始通过 `ActivityRefWatcher`对销毁的 `Activity`进行观察。
+
+知识点2:
+
+创建一个 uuid 作为 key，给被销毁的`Activity`实例添加弱引用（`KeyedWeakReference`，具有额外 key 字段的弱引用），以及关联指定的引用队列，并把这个 key 添加到一个 Set 中。
+
+知识点三：
+
+通过 `addIdleHandler()`在主线程空闲的时候，再延迟 5s 检查被销毁的 Activity 是否已被回收。
+
+知识点四：
+
+遍历之前关联的引用队列，把里面存在的 key 都从上述 Set 中移除。然后看被销毁的 `Activity` 对应弱引用的 key 是否还在 Set 中，如果不存在，证明 `Activity` 已被正确回收；如果存在，则强制执行一次 GC，再重复一次之前的操作。
+
+## Glide
+
+Glide的优点：
+
+* 可以加载多种格式的图片（如Gif、WebP、缩略图、Video）
+* 集成生命周期，合理地加载和自动取消
+* 高效处理 Bitmap（bitmap的复用和主动回收，减少系统回收压力）
+* 高效的缓存策略，弱引用-LruCache-DiskLruCache，缓存 ImageView 不同尺寸的图片
+* 默认RGB_565，内存占用小
+
+遇到的坑：
+
+* Glide 默认会加载缓存图片，当服务器端修改时需要 `skipMemoryCache` 以及把 `diskCacheStrategy` 设置成 `None`
+* 第一次加载图片可能会出现拉伸变形，设置`.dontAnimate()`取消动画即可解决
+* `preLoad` 要设置与 ImageView 一致的宽高，否则没效果

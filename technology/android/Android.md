@@ -514,12 +514,83 @@ HandlerThread 继承自 Thread，在 `run` 方法里面帮我们做了 `Looper.p
 
 ## View
 
-###EditText
+1. `View`的绘制流程
 
-android:imeOptions 属性
+   `ViewRootImpl` 从`scheduleTraversals` 开始，通过`Choreographer`请求`VSync`信号，然后依次调用`performMeasure`、`performLayout`、`performDraw`遍历`View`树执行绘制流程。每 `View`的绘制都需要经历`measure`（设置测量宽高）、`layout`（确定最终宽高以及布局位置）、`draw`（绘制）。其中`draw`的流程遵循以下几步（不一定都调用，简化代码）：
 
+   ```java
+   //绘制自身背景
+   drawBackground(canvas);
+   //绘制自身内容
+   onDraw(canvas);
+   //绘制children
+   dispatchDraw(canvas);
+   //绘制Overlay
+   mOverlay.getOverlayView().dispatchDraw(canvas);
+   //绘制自身前景以及scrollbars
+   onDrawForeground(canvas);
+   ```
 
-###自定义View
+2. `MeasureSpec`的理解
+
+   测量规格，由一个 32 位 int 值来表示，高 2 位代表 `SpecMode`，低 30 位代表 `SpecSize`， `SpecMode`包含以下三种：
+
+   ```java
+   UNSPECIFIED：父容器不对子View有限制，子View要多大给多大，这种一般我们不会接触到
+   EXACTLY：精确模式，子View的宽高即为SpecSize
+   AT_MOST：最大宽高模式，限制子View的宽高在SpecSize内
+   ```
+
+3. `MotionEvent`是什么？包含几种事件？什么条件下会产生？
+
+   代表触摸事件，包括如下四种：
+
+   ```java
+   ACTION_DOWN：手指按下屏幕
+   ACTION_MOVE：手指在屏幕上移动
+   ACTION_UP：手指松开屏幕 
+   ACTION_CANCELL：手持保持按下动作，移动到外层控件时触发
+   ```
+
+   单击事件序列：`DOWN` -> `UP`
+
+   点击屏幕滑动再松开：`DOWN` -> `一系列MOVE`-> `UP or CANCELL`
+
+4. `View`事件的分发机制
+
+   底层 `EventHub` 获取设备节点 `dev/input` 的输入事件，然后 `InputReader` 线程读取输入事件，放进队列中，并唤醒`InputDispatcher` 线程，`InputDispatcher`循环从队列中获取输入事件，并根据焦点找到对应的 `window` 来处理，输入事件经过层层转换，最终包装为 `MotionEvent` 或 `KeyEnent` 依次分发给`Activity`-> `PhoneWindow` -> `DecorView`，进入到 `View` 的事件分发机制。事件分发机制涉及到以下三个流程：
+
+   ```
+   dispatchTouchEvent：用来进行事件的分发，返回结果受当前View的onTouchEvent和下级View的dispatchTouchEvent方法的影响，表示是否消耗当前事件
+   onInterceptTouchEvent：该方法只在ViewGroup中存在，在dispatchTouchEvent方法内部调用，表示是否拦截事件，一旦拦截，则执行ViewGroup的onTouchEvent，不分发给子View
+   onTouchEvent：在dispatchTouchEvent方法中调用，用来处理触摸事件，返回结果表示是否消耗当前事件，事件未消耗时抛给上级View的onTouchEvent处理
+   ```
+
+5. 如何解决`View`的滑动冲突 ？ 举个开发中遇到的例子 ？
+
+   外部拦截法：产生滑动冲突的`ViewGroup`都重写 `onInterceptTouchEvent`，如果`ViewGroup`不需要事件则拦截，需要就不拦截，确保事件只会在一个`ViewGroup`里面分发。不同方向的滑动冲突可以根据手指滑动方向判断，相同方向根据业务判断。
+
+   内部拦截法：子`View`通过调用`requestDisallowInterceptTouchEvent`来确定是否需要`ViewGroup`拦截事件。
+
+   例子：`ViewPager`+`ScrollView`
+
+6. `scrollTo()`和`scollBy()`的区别？
+
+   `scollBy`内部调用了`scrollTo`，它是基于当前位置的相对滑动；而`scrollTo`是绝对滑动。
+
+7. `Scroller`是怎么实现View的弹性滑动？
+
+   在`ACTION_UP`事件触发时调用`startScroll()`方法，该方法并没有进行实际的滑动操作，而是记录滑动相关量（滑动距离、滑动时间）,接着调用`invalidate/postInvalidate()`方法，请求`View`重绘，当`View`重绘后会在`draw`方法中调用`computeScroll`方法，而`computeScroll`又会去向`Scroller`获取当前的`scrollX`和`scrollY`；然后通过`scrollTo`方法实现滑动；接着又调用`postInvalidate`方法来进行第二次重绘，和之前流程一样，如此反复导致`View`不断进行小幅度的滑动，而多次的小幅度滑动就组成了弹性滑动，直到整个滑动过成结束。
+
+8.  `invalidate()`和`postInvalidate()`的区别 ？
+
+   `invalidate()`与`postInvalidate()`都用于触发重绘，主要区别是`invalidate()`在主线程中调用，若在子线程中使用需要配合`handler`；而`postInvalidate()`借助了`ViewRootImpl`的`hander`，可以在子线程直接调用。
+
+9. `SurfaceView`和`View`的区别？
+
+   `SurfaceView`适用于频繁主动刷新，可以在子线程更新，不依赖系统的`VSync`信号，有自己专门的`Surface`，并且底层实现了双缓冲机制。
+
+   `View`一般受限于`Android`的`UI`框架，属于被动刷新，依赖系统的`VSync`信号。
 
 #### Paint
 
