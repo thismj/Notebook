@@ -617,7 +617,27 @@ fun Canvas.drawTextByPoint(
 }
 ```
 
+## SurfaceView
 
+### 显示问题
+
+`SurfaceView`持有的`Surface`的`Z-Order`小于`Activity`的`Window`对应的`Surface`的`Z-Order`，所以如果想要显示它绘制的内容就必须从`Activity`的`Surface`打一个透明的洞出来，大致流程分析如下：
+
+ `SurfaceView` 在 `onAttachedToWindow()`方法回调时会通过 `ViewRootImpl.requestTransparentRegion()` 请求设置透明 `Region`（即打洞 punches a hole），首先设置透明`Region`为整个 `DecorView`范围，然后遍历`View`树通过 `gatherTransparentRegion()`方法对 `Region`进行整合计算（普通`View`从`Region`中去掉自身的区域，`SurfaceView`则相反）得到需要打洞（即透明）的区域， `SurfaceFlinger` 会把`Activity`的`Window`对应的`Surface`的上述区域设置成透明。所以如果 `SurfaceView`本身的层级被其他`View`覆盖的时候，在遍历计算透明`Region`的时候，这个透明`Region`也会被覆盖回去，这样就不会打洞了。 
+
+可以通过`SurfaceView.setZOrderOnTop(true)`使其`Z-Order`在`Activity`的`Window`之上，这样它就会覆盖那些普通的`View`了。
+
+如果有多个`SurfaceView`叠加，可以给某个`SurfaceView`设置`setZOrderMediaOverlay(true)`，这样它就只会覆盖在其他的`SurfaceView`上面，而不会覆盖掉`Activity`上的那些普通`View`。
+
+每次通过`SurfaceHolder.lockCanvas()` 获取的都是同一个画布，绘制之前需要进行清屏操作（普通`View`的`canvas`在`ViewRootImpl`做了清屏操作）：
+
+```java
+canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+```
+
+### 双缓冲机制
+
+一般来说将双缓冲用到的两块缓冲区称为 -- 前缓冲区(front buffer) 和 后缓冲区(back buffer)。显示器显示的数据来源于 front buffer 前缓存区，而每一帧的数据都绘制到 back buffer 后缓存区，在 Vsync 信号到来后会交互缓存区的数据(指针指向)，这时 front buffer 和 back buffer 的称呼及功能倒转。
 
 ## Drawable
 
