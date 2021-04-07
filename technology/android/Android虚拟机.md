@@ -1,5 +1,42 @@
 # Android虚拟机
 
+## 64K引用限制跟 LinearAlloc 问题
+
+`Android`应用 `APK` 中包含 `class.dex` 文件，`Android`虚拟机规范规定单个`DEX` 文件可引用的方法总数限制为`65536`,这个限制不是因为`DEX`文件格式的限制，而是虚拟机的 `invoke-kind`指令集中指定方法索引的字段只有`16`位，所以只能调用`DEX`文件的前`65535`个方法[Dalvik 字节码](https://source.android.google.cn/devices/tech/dalvik/dalvik-bytecode?hl=zh-cn)
+
+在 `Android 5.0`以前，`Dalvik`虚拟机可以通过`MultiDex`的库解决该问题，这个库会成为主`DEX`文件的一部分，然后管理对其他`DEX`文件的访问：
+
+```groovy
+android {
+    defaultConfig {
+        ...
+        minSdkVersion 15
+        targetSdkVersion 28
+        multiDexEnabled true
+    }
+    ...
+}
+
+dependencies {
+  //依赖 MultiDex 库，然后把 Application 替换为 MultiDexApplication，或者在原有 Application 的 attchBaseContext 方法执行 MultiDex.install(this) 即可。
+  implementation "androidx.multidex:multidex:2.0.1"
+}
+```
+
+在`Android 5.0`以及之后，`Android`虚拟机使用`ART`，本身就支持从`APK`中加载多个`DEX`文件，所以会默认启用`MultiDex`。当构建应用时，`Android`构建工具会根据需要构造主`DEX`文件 (`classes.dex`) 和辅助`DEX`文件（`classes2.dex` 和 `classes3.dex` 等）。然后，构建系统会将所有`DEX`文件打包到`APK`中。
+
+对于`Dalvik`虚拟机来说，在应用的安装过程中会执行一个`dexopt`的程序，它会使用`LinearAlloc`来储存应用的方法信息，`LinearAlloc`是一个固定大小的缓冲区，在`Android 2.3`以及以下版本只有`5MB`（`4.x`版本提高到了`8MB`/`16MB`），当`DEX`文件中方法数过多时，会导致`dexopt`崩溃从而引发`INSTALL_FAILED_DEXOPT`。该问题主要发生在低版本上(`2.3`)，解决办法是在`dx`时通过设置`--set-max-idx-number`指定单个`DEX`文件的最大方法数。
+
+`Dalvik`使用`MultiDex`有哪些问题（`ART`下采用`Ahead-of-time AOT`，会通过`dex2oat`把`DEX`文件编译生成本地机器可运行的`oat`文件，所以不存在下述问题）：
+
+* 在冷启动时因为需要安装DEX文件，如果DEX文件过大时，处理时间过长，很容易引发ANR（Application Not Responding）
+* 采用MultiDex方案的应用可能不能在低于Android 4.0 (API level 14) 机器上启动，这个主要是因为Dalvik linearAlloc的一个bug ([Issue 22586](http://b.android.com/22586))
+* 采用MultiDex方案的应用因为需要申请一个很大的内存，在运行时可能导致程序的崩溃，这个主要是因为Dalvik linearAlloc 的一个限制([Issue 78035](http://b.android.com/78035))
+
+
+
+
+
 ## Dalvik
 
 ## ART

@@ -146,6 +146,17 @@ Transformations：利用 MediatorLiveData 进行 LiveData 的数据类型转换 
 ComputableLiveData：带有生命周期监听、响应式的触发耗时任务、以 LiveData 作为中介获取任务执行结果
 ```
 
+#### 粘性事件、数据倒灌：
+
+`LiveData.observer()` 的时候，每一个 Observer 会有一个 `mLastVersion` 的字段，表示该 Observer 的数据版本，默认是 `START_VERSION`（-1），LiveData 本身也有个 `mVersion` 的字段，表示当前数据的版本。添加新 Observer 的时候，由于 mLastVersion 是 -1，如果 LiveData 之前设置过数据，则 mLastVersion < mVersion，所以会把数据粘性回调给新的 Observer。
+
+解决办法：
+
+* 添加新的 Observer 时 反射修改其 `mLastVersion` 为 `mVersion`
+* 事件包装器
+
+
+
 
 
 ### ViewModel
