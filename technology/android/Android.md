@@ -639,6 +639,14 @@ canvas.drawColor(0, PorterDuff.Mode.CLEAR);
 
 一般来说将双缓冲用到的两块缓冲区称为 -- 前缓冲区(front buffer) 和 后缓冲区(back buffer)。显示器显示的数据来源于 front buffer 前缓存区，而每一帧的数据都绘制到 back buffer 后缓存区，在 Vsync 信号到来后会交互缓存区的数据(指针指向)，这时 front buffer 和 back buffer 的称呼及功能倒转。
 
+### SurfaceView、TextureView、GLSurfaceView、SurfaceTexture
+
+`SurfaceView`：拥有自己的`Surface`，独立于`Activity`的`View hierachy`，可以在子线程中更新UI，底层实现了双缓冲机制，但是不能使用`View`的一些特性，例如变形和动画。
+
+`GLSurfaceView`：继承自`SurfaceView`，添加了`EGL`的管理，并自带了渲染线程，
+
+`TextureView`：可以把内容流作为外部纹理输出在上面的`View`，需要在开启硬件加速的`Window`中使用。`TextureView`是在`View hierachy`里面的，所以可以和其它普通`View`一样进行移动，旋转，缩放，动画等操作。`5.0`以前是在主线程做绘制，`5.0`之后是在渲染线程中做绘制。
+
 ## Drawable
 
 | XML标签           | Drawable                  | 备注   |
@@ -1259,6 +1267,17 @@ PPID：父进程ID，所有 APP 进程 fork 自 zygote 进程，所以 13539 进
 * fork native进程拉活（5.0以uid杀进程组，失效）
 * 1像素Activity、后台无声音乐？？？？
 * 加入手机厂商白名单&引导用户把app加入系统白名单
+
+### 进程同步
+
+* 单独 ContentProvider 进程管理数据，中心化架构，启动跟访问都比较慢，只能保证进程间的同步
+* 文件锁`FileLock`，共享锁允许多个线程进行读取操作，独占锁只允许一个线程进行读/写操作，可以通过阻塞`FileChannel.lock()`或者非阻塞`FileChannel.tryLock()`方法获取文件锁，并且支持锁定部分文件。
+
+## 储存
+
+### SharedPreferences
+
+
 
 ### 易出错的地方
 

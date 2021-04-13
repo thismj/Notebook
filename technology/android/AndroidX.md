@@ -174,7 +174,7 @@ ViewModelProvider(this).get<MyViewModel>()
 ViewModelProvider(this).get("key-str",MyViewModel::class.java) //指定ViewModelStore保存的Key
 ```
 
-构造 ViewModelProvider 需要传 ViewModelStoreOwner（获取ViewModelStore实例）和一个 Factory 对象（用来构造ViewModel实例），ComponentActivity 和 Fargment 都实现了 ViewModelStoreOwner 接口，内部保存了一个 ViewModelStore 实例（内部是一个 hashMap 用来存储 ViewModel 实例）。在 ActivityThread 的 performDestroyActivity() 方法里面，会调用 Activity 实例的 retainNonConfigurationInstances() 方法来保存一个 NonConfigurationInstances对象（lastNonConfigurationInstances：里面包含有当前的 ViewModelStore实例） ，由于配置发生改变重新创建Activity时，在 performLaunchActivity() 方法里面把 lastNonConfigurationInstances 重新赋值回去，所以确保Activity重新创建时（配置发生改变）能获取到上次使用的 ViewModel 实例。在Activity onDestroy回调时，判断是否由于配置改变导致的重建，如果不是，则正常 clear ViewModelStore 里面所有的 ViewModel 实例。
+构造 ViewModelProvider 需要传 ViewModelStoreOwner（获取ViewModelStore实例）和一个 Factory 对象（用来构造ViewModel实例），ComponentActivity 和 Fargment 都实现了 ViewModelStoreOwner 接口，内部保存了一个 ViewModelStore 实例（内部是一个 hashMap 用来存储 ViewModel 实例，key为默认的DEFAULT_KEY `androidx.lifecycle.ViewModelProvider.DefaultKey`+`ViewModel`类的全限定名）。在 ActivityThread 的 performDestroyActivity() 方法里面，会调用 Activity 实例的 retainNonConfigurationInstances() 方法来保存一个 NonConfigurationInstances对象（lastNonConfigurationInstances：里面包含有当前的 ViewModelStore实例） ，由于配置发生改变重新创建Activity时，在 performLaunchActivity() 方法里面把 lastNonConfigurationInstances 重新赋值回去，所以确保Activity重新创建时（配置发生改变）能获取到上次使用的 ViewModel 实例。在Activity onDestroy回调时，判断是否由于配置改变导致的重建，如果不是，则正常 clear ViewModelStore 里面所有的 ViewModel 实例。
 
 默认的几个 factory，不指定的话默认是 NewInstanceFactory，反射构造无参 ViewModel 实例；AndroidViewModelFactory，需要 ViewModel 有一个带有 Application 参数的构造函数；KeyedFactory，需要指定 ViewModelStore 保存 ViewModel 的Key。可以实现 HasDefaultViewModelProviderFactory 来指定 ViewModelStoreOwner 的默认 Factory。
 

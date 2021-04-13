@@ -1,6 +1,16 @@
 # Android架构
 
+[MVC，MVP 和 MVVM 的图示](https://www.ruanyifeng.com/blog/2015/02/mvcmvp_mvvm.html)
+
+## MVC
+
+![](https://www.ruanyifeng.com/blogimg/asset/2015/bg2015020105.png)
+
+
+
 ## MVP
+
+![](https://www.ruanyifeng.com/blogimg/asset/2015/bg2015020109.png)
 
 ### 优势
 
@@ -14,6 +24,8 @@
 * Presenter 层跟 View 层存在耦合，View 层修改时可能会导致 Presenter 层大量变动
 
 ## MVVM
+
+![](https://www.ruanyifeng.com/blogimg/asset/2015/bg2015020110.png)
 
 核心：依赖于生命周期感知组件 Lifecycle 的 ViewModel 和 LiveData。
 

@@ -124,6 +124,7 @@ Trace.endSection();
 * 启动器思想，每个需要初始化的组件抽象为一个 Task 实例
 * 指定各个 Task 之间的依赖关系，构造一个 Task 的有向无环图，通过拓扑排序优化确定 Task 的初始化顺序 
 * 线程池并发执行各个 Task 的初始化，通过同步手段（例如CountDownLatch）保证 Task 执行的依赖关系
+* CPU密集型任务应配置尽可能小的线程，如配置CPU数目+1个线程的线程池。由于IO密集型任务线程并不是一直在执行任务，则应配置尽可能多的线程，如 2*CPU 数目。
 
 实践经验：
 
@@ -271,9 +272,12 @@ shamu:/ # cat proc/13539/oom_score_adj
 * 循环体内使用 + 拼接字符串或者不断地创建局部变量
 * onDraw() 、getView() 中每次都创建新的对象
 * 对于需要频繁创建和回收的对象没有建立全局缓存池（Handler的Message就是使用了池的设计思想）
-* key为 int 且数据量不大时用 SparseArray 替代 HashMap（省去装箱过程，提升效率，无需储存额外的hashcode、Entry对象等，节省内存）
 
+### 内存优化
 
+* 使用高性能的数据结构，key为 int 且数据量不大时用 SparseArray 替代 HashMap（省去装箱过程，提升效率，无需储存额外的hashcode、Entry对象等，节省内存）
+* Bitmap的优化，缓存、inBitmap，inSampleSize等，图片放到 nodpi 防止缩放
+* 对象复用，创建对象池
 
 
 

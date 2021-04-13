@@ -19,7 +19,7 @@ body的内容通过流获取，读取之后流会被close掉
 
 **okhttp实现带进度上传下载**
 
-扩展RequestBody、ResponseBody，自定义拦截器进行替换，增加自己的回调接口
+扩展RequestBody、ResponseBody，借助 ForwardingSource 获取进度，自定义拦截器进行替换，增加自己的回调接口
 
 **okhttp运用的设计模式**
 

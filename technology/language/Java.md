@@ -181,6 +181,8 @@ hashcode() 默认返回跟对象内存地址有关，如果重写了 equal() 但
 
 [Java中的强引用，软引用，弱引用，虚引用有什么用？](https://www.zhihu.com/question/37401125)
 
+对于软引用和弱引用，当执行第一次垃圾回收时，就会将软引用或弱引用对象添加到其关联的引用队列中，然后其finalize函数才会被执行（如果没覆写则不会被执行）；而对于虚引用，如果被引用对象没有覆写finalize方法，则是在第一垃圾回收将该类销毁之后，才会将虚拟引用对象添加到引用队列，如果被引用对象覆写了finalize方法，则是当执行完第二次垃圾回收之后，才会将虚引用对象添加到其关联的引用队列。
+
 ### final、finally、finalize区别
 
 [Java 中的 final、finally、finalize 有什么不同？](https://zhuanlan.zhihu.com/p/88957765)
@@ -206,6 +208,77 @@ hashcode() 默认返回跟对象内存地址有关，如果重写了 equal() 但
 ### 注解
 
 [JAVA 注解的基本原理](https://zhuanlan.zhihu.com/p/78182978)
+
+Java注解（也被称为元数据），为我们再代码中添加信息提供了一种形式化的方法。
+
+内置标准注解：
+
+- @Override （1.5）
+  表示当前方法将覆盖父类的方法，如果方法名称或者签名对不上，则编译器会提示错误信息
+- @Deprecated（1.5）
+  标记当前元素已过时，编译器会给出警告
+- @SuppressWarnings（1.5）
+  关闭编译器警告信息，通过字符串来指定需要关闭的编译警告类型，支持的编译警告类型取决于使用的编译器或IDE
+- @SafeVarargs （1.7）
+  表明该方法内部不会执行类型不安全的操作，可注解于构造函数或者 static、final 修饰的方法，让编译器不提示 "unchecked" 警告
+- @FunctionalInterface （1.8）
+  表明这是个函数式接口（可转换为 lambda 表达式），如果该接口里面不止一个抽象方法，则编译器会提示错误信息
+
+内置元注解（负责注解其它的注解）
+
+- @Target：指定该注解可用的作用域，ElementType 枚举类型包括：
+
+| ElementType     | 作用域                 |
+| --------------- | ---------------------- |
+| TYPE            | 类、接口、枚举         |
+| FIELD           | 类字段（包括枚举常量） |
+| METHOD          | 方法                   |
+| PARAMETER       | 参数                   |
+| CONSTRUCTOR     | 构造函数               |
+| LOCAL_VARIABLE  | 局部变量               |
+| ANNOTATION_TYPE | 注解类型               |
+| PACKAGE         | 包                     |
+| TYPE_PARAMETER  | 泛型参数（1.8）        |
+| TYPE_USE        | 类型名称（1.8）        |
+
+- @Retention：指定注解保留的阶段，RetentionPolicy 枚举类型包括：
+
+| RetentionPolicy | 阶段                                    |
+| --------------- | --------------------------------------- |
+| SOURCE          | 仅保留在源码阶段，会被编译器丢弃        |
+| CLASS           | 编译时保留在 class 文件中，VM运行时丢弃 |
+| SOURCE          | 保留到VM运行时，可以通过反射获取信息    |
+
+- @Documented：指定生成 JavaDoc 时包含该注解
+
+- @Inherited：指定该注解作用在 class 上时，子类可以继承父类的注解
+
+- @Native：表示定义常量值的字段可以被 native 代码引用（1.8）
+
+- @Repeatable：指定一个容器注解，使该注解可以在一个元素上重复使用（1.8）：
+
+  ```java
+   @Repeatable(Authorities.class)
+    public @interface Authority {
+        String role();
+    }
+  
+    public @interface Authorities {
+        Authority[] value();
+    }
+  
+    public class RepeatAnnotationUseNewVersion {
+        @Authority(role="Admin")
+        @Authority(role="Manager")
+        public void doSomeThing(){ }
+    }
+  ```
+
+注解本质来说是一个继承了`Annotation`接口的接口，当对它进行解析的时候才有存在的意义，否则就跟注释的功能一样了。在运行阶段通过`getAnnotation`方法去获取一个注解实例的时候，其实是`JVM`通过动态代理的机制生成了一个实现我们注解接口的类，这个代理类通过`AnnotationInvocationHandler`来处理注解实例方法的调用，这个`handler`里面会用一个`Map`来保存所有注解属性的名字以及值。
+
+注解处理器
+
+apt（Annotation processing tool）是`javac`的一个工具，实现注解处理器需要继承`AbstractProcessor`类，然后在`META-INF`文件中注册，`javac`在编译的时候会去`META-INF`查找实现了`AbstractProcessor`的子类，并调用它们的`process`函数，然后再反射基于注解信息来生成新的`.java`源文件。
 
 ### 其它
 
@@ -300,6 +373,10 @@ ConcurrentHashMap
 * [什么是ConcurrentHashMap？](https://zhuanlan.zhihu.com/p/31614308)
 * 1.7: 分段加锁技术，Segment 数组（Segment 继承自 ReentrantLock）+HashEntry数组（数组链表法），不同的 Segment 可以并发读写，同一个 Segment 读跟写也可以并发（读操作不加锁），同一个Segment 写跟写会阻塞（写操作加锁）；锁的粒度变小；size 方法循环统计 Segments 元素个数，通过判断对 segments 的修改次数，决定是否重新统计，超过重试次数，对每个 Segment  加锁，最后做一次统计。
 * 1.8: 不再有 Segment 的概念，跟 1.8 hashMap的数据结构一致，数组+链表或红黑树，对每一个桶结点加锁（同步锁），锁的粒度更小了
+
+WeakHashMap
+
+内部的 Entry 继承自 WeakReference 并且实现了 Map.Entry，即  key 被包装为一个弱引用，并且关联了 ReferenceQueue，在对数据进行操作或者查询的时候会调用`expungeStaleEntries`方法，遍历引用队列，如果 Key 已经被回收的话则自动把数据从集合中移除。
 
 ### SET
 
@@ -504,6 +581,8 @@ ThreaLocal 是一个泛型类，可以接受任何类型的对象。Thread 实�
 
 [面试必问的CAS，你懂了吗？](https://zhuanlan.zhihu.com/p/34556594)
 
+CAS指令在Intel CPU上称为CMPXCHG指令，**它的作用是将指定内存地址的内容与所给的某个值相比，如果相等，则将其内容替换为指令中提供的新值，如果不相等，则更新失败。**这一比较并交换的操作是原子的，不可以被中断。
+
 CAS 自旋操作可以避免线程切换的开销，但是存在以下问题：
 
 1. ABA问题，解决办法是变量增加版本号。
@@ -524,9 +603,23 @@ Java 1.6之前都是 Synchronized 都是重量级锁，利用操作系统底层�
 
 非公平锁是多个线程加锁时直接获取锁，当获取不到时才会加进等待队列的队尾，线程有几率不阻塞直接获取锁，整体的吞吐量高，可以减少唤起线程的开销，但是又可能会造成某个线程饿死，或者等待很久才能获取锁。
 
+#### 可重入锁
+
 [谈谈 synchronized 和 ReentrantLock 的区别](https://cloud.tencent.com/developer/article/1459414)
 
-####volatile
+ReentrantLock的一些高级功能：
+
+* tryLock()，尝试获取锁，可以超时中断
+* 实现公平锁
+* 绑定多个Condition，实现选择性通知
+
+ReentrantLock 使用一个队列跟两个 Condition（`pCondition`、`cCondition`） 来实现生产/消费者模式，队列用来储存事件，当队列满了的时候，调用`pCondition.await()`进入等待，如果消费者从队列中消费了事件，则调用`pCondition.signalAll()`通知生产者往队列中生产事件；如果队列空了的时候，调用`cCondition.await()`使消费者进入等待状态，如果此时生产者往队列中生产了新的事件，则调用`cCondition.signalAll()`通知消费者从队列中消费事件。
+
+
+
+
+
+#### volatile
 
 JMM：Java内存模型
 
