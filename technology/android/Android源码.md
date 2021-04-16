@@ -944,7 +944,12 @@ final void appNotResponding(ProcessRecord app, ActivityRecord activity,
 3. 查看 /data/anr/trace.txt 文件
 4. trace.txt文件只会存最近一次发生的 ANR，会把之前发生过的覆盖掉，所有有时还需要 /data/system/dropbox 文件夹下面 `system_app_anr@时间戳.txt.gz` 文件
 
+#### ANR例子
 
+* 主线程执行耗时的计算或者I/O操作，例如 SharedPrefeces.commit() 或者 apply() 方法，日志保存等
+* 主线程与子线程发生锁竞争
+* 通过Binder执行跨进程同步调用时，对端阻塞
+* CPU负载过高，资源紧张
 
 ## RecyclerView
 

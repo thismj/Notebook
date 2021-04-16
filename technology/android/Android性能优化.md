@@ -103,6 +103,12 @@ Trace.endSection();
 * 捕获应用程序某个时间点的堆内存快照，例如可以在反复多次进出 Activity 之后进行捕获，如果堆快照中还存在该 Activity 实例则代表泄漏
 * 保存 Android 格式的 .hprof（Heap Profiler ） 文件，可以用 android_sdk/platform-tools/ 的 hprof-conv 工具转换为 Java SE HPROF 格式
 
+### 方法
+
+使用 **Hierarchy Viewer** 分析布局情况，已被弃用，如今不再维护了。
+
+[Window.OnFrameMetricsAvailableListener](https://developer.android.com/reference/android/view/Window.OnFrameMetricsAvailableListener?hl=zh-cn)
+
 ## 启动优化
 
 [深入探索Android启动速度优化（上）](https://juejin.cn/post/6844904093786308622#heading-69)
