@@ -235,7 +235,9 @@ Android提供的序列化接口，基于内存，通过 `Parcel` 来传输，在
 
 
 
+## binder如何传输大文件
 
+[Android跨进程传输超大bitmap的实现](https://blog.csdn.net/ylyg050518/article/details/97671874)
 
 
 
